@@ -71,6 +71,7 @@ struct enclave
 
   /* measurement */
   byte hash[MDSIZE];
+  byte hash_runtime_and_eapp[MDSIZE];
   byte sign[SIGNATURE_SIZE];
 
   /* parameters */

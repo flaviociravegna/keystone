@@ -285,6 +285,15 @@ static int is_create_args_valid(struct keystone_sbi_create* args)
   /*        args->runtime_paddr, */
   /*        args->user_paddr, */
   /*        args->free_paddr); */
+  sbi_printf("[create args info]: \r\n\tepm_addr: %lx\r\n\tepmsize: %lx\r\n\tutm_addr: %lx\r\n\tutmsize: %lx\r\n\truntime_addr: %lx\r\n\tuser_addr: %lx\r\n\tfree_addr: %lx\r\n",
+            args->epm_region.paddr,
+            args->epm_region.size,
+            args->utm_region.paddr,
+            args->utm_region.size,
+            args->runtime_paddr,
+            args->user_paddr,
+            args->free_paddr);
+  sbi_printf("\n");
 
   // check if physical addresses are valid
   if (args->epm_region.size <= 0)
