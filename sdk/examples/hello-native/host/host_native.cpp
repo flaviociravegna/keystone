@@ -4,12 +4,14 @@
 //------------------------------------------------------------------------------
 #include <edge_call.h>
 #include <keystone.h>
-
-unsigned long
-print_string(char* str);
-void
-print_string_wrapper(void* buffer);
 #define OCALL_PRINT_STRING 1
+#define OCALL_VERIFY_INTEGRITY 2
+
+unsigned long print_string(char* str);
+void print_string_wrapper(void* buffer);
+
+void verify_integrity();
+void verify_integrity_wrapper(void* buffer);
 
 /***
  * An example call that will be exposed to the enclave application as
@@ -20,6 +22,10 @@ print_string_wrapper(void* buffer);
 unsigned long
 print_string(char* str) {
   return printf("Enclave said: \"%s\"\n", str);
+}
+
+void verify_integrity() {
+    printf("\n --------- verification done ---------- \n");
 }
 
 int
@@ -37,6 +43,7 @@ main(int argc, char** argv) {
   /* We must specifically register functions we want to export to the
      enclave. */
   register_call(OCALL_PRINT_STRING, print_string_wrapper);
+  register_call(OCALL_VERIFY_INTEGRITY, verify_integrity_wrapper);
 
   edge_call_init_internals(
       (uintptr_t)enclave.getSharedBuffer(), enclave.getSharedBufferSize());
@@ -77,4 +84,24 @@ print_string_wrapper(void* buffer) {
 
   /* This will now eventually return control to the enclave */
   return;
+}
+
+void verify_integrity_wrapper(void* buffer) {
+    /* Parse and validate the incoming call data */
+    struct edge_call* edge_call = (struct edge_call*)buffer;
+    uintptr_t call_args;
+    unsigned long ret_val;
+    size_t arg_len;
+    if (edge_call_args_ptr(edge_call, &call_args, &arg_len) != 0) {
+        edge_call->return_data.call_status = CALL_STATUS_BAD_OFFSET;
+        return;
+    }
+
+    /* Pass the arguments from the eapp to the exported ocall function */
+    verify_integrity();
+
+    edge_call->return_data.call_status = CALL_STATUS_OK;
+
+    /* This will now eventually return control to the enclave */
+    return;
 }

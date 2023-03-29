@@ -689,3 +689,11 @@ unsigned long get_sealing_key(uintptr_t sealing_key, uintptr_t key_ident,
 
   return SBI_ERR_SM_ENCLAVE_SUCCESS;
 }
+
+
+unsigned long verify_integrity_rt_eapp(int eid) {
+    sbi_printf("\nComputing the hash...\n");
+    compute_rt_eapp_hash(&enclaves[eid]);
+    sbi_printf("Operation completed\n\n");
+    return SBI_ERR_SM_ENCLAVE_SUCCESS;
+}

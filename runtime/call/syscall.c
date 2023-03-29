@@ -183,6 +183,11 @@ void handle_syscall(struct encl_ctx* ctx)
     copy_to_user((void*)arg0, (void*)rt_copy_buffer_1, 2048);
     //print_strace("[ATTEST] p1 0x%p->0x%p p2 0x%p->0x%p sz %lx = %lu\r\n",arg0,arg0_trans,arg1,arg1_trans,arg2,ret);
     break;
+
+  case(RUNTIME_SYSCALL_VERIFY_INTEGRITY_RT_EAPP):
+      ret = sbi_verify_integrity_rt_eapp();
+      break;
+
   case(RUNTIME_SYSCALL_GET_SEALING_KEY):;
     /* Stores the key receive structure */
     uintptr_t buffer_1_pa = kernel_va_to_pa(rt_copy_buffer_1);

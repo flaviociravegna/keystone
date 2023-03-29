@@ -8,15 +8,20 @@
 #include <syscall.h>
 
 #define OCALL_PRINT_STRING 1
+#define OCALL_VERIFY_INTEGRITY 2
 
 unsigned long ocall_print_string(char* string);
 
 int main(){
-
-  ocall_print_string("Hello World");
+  int i;
+  //ocall_print_string("Hello World");
+  for (i = 0; i < 5; i++)
+     verify_integrity_rt_eapp();
 
   EAPP_RETURN(0);
 }
+
+/****************************************/
 
 unsigned long ocall_print_string(char* string){
   unsigned long retval;

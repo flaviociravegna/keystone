@@ -33,3 +33,7 @@ get_sealing_key(
       SYSCALL_GET_SEALING_KEY, sealing_key_struct, sealing_key_struct_size,
       key_ident, key_ident_size);
 }
+
+int verify_integrity_rt_eapp() {
+    return SYSCALL_0(SYSCALL_VERIFY_INTEGRITY_RT_EAPP);
+}

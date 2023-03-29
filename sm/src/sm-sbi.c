@@ -98,9 +98,8 @@ unsigned long sbi_sm_call_plugin(uintptr_t plugin_id, uintptr_t call_id, uintptr
   return ret;
 }
 
-/***************** NEW SYSCALL *******************
+/***************** NEW SYSCALL *******************/
 
-unsigned long sbi_sm_verify_integrity_rt_eapp(uintptr_t report, uintptr_t data, uintptr_t size) {
-    return attest_enclave(report, data, size, cpu_get_enclave_id());
+unsigned long sbi_sm_verify_integrity_rt_eapp() {
+    return verify_integrity_rt_eapp(cpu_get_enclave_id());
 }
-*/

@@ -15,6 +15,7 @@
 #define RUNTIME_SYSCALL_SHAREDCOPY          1002
 #define RUNTIME_SYSCALL_ATTEST_ENCLAVE      1003
 #define RUNTIME_SYSCALL_GET_SEALING_KEY     1004
+#define RUNTIME_SYSCALL_VERIFY_INTEGRITY_RT_EAPP 1100
 #define RUNTIME_SYSCALL_EXIT                1101
 
 void handle_syscall(struct encl_ctx* ctx);

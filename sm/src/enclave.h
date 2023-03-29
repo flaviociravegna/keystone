@@ -133,4 +133,9 @@ int get_enclave_region_index(enclave_id eid, enum enclave_region_type type);
 uintptr_t get_enclave_region_base(enclave_id eid, int memid);
 uintptr_t get_enclave_region_size(enclave_id eid, int memid);
 unsigned long get_sealing_key(uintptr_t seal_key, uintptr_t key_ident, size_t key_ident_size, enclave_id eid);
+
+/************ verification of the enclave at runtime ************/
+unsigned long verify_integrity_rt_eapp(int eid);
+void compute_rt_eapp_hash(struct enclave *enclave);
+int walk_pt_and_hash(struct enclave *enclave, hash_ctx *ctx_x_pages, uintptr_t *tb, uintptr_t vaddr, int contiguous, int level);
 #endif

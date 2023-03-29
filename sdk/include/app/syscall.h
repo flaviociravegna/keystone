@@ -14,6 +14,7 @@
 #define SYSCALL_SHAREDCOPY 1002
 #define SYSCALL_ATTEST_ENCLAVE 1003
 #define SYSCALL_GET_SEALING_KEY 1004
+#define SYSCALL_VERIFY_INTEGRITY_RT_EAPP 1100
 #define SYSCALL_EXIT 1101
 
 #define SYSCALL(which, arg0, arg1, arg2, arg3, arg4)           \
@@ -57,5 +58,7 @@ int
 get_sealing_key(
     struct sealing_key* sealing_key_struct, size_t sealing_key_struct_size,
     void* key_ident, size_t key_ident_size);
+
+int verify_integrity_rt_eapp();
 
 #endif /* syscall.h */

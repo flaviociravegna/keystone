@@ -18,7 +18,7 @@ platform-objs-y += ../../src/mprv.o
 platform-objs-y += ../../src/sbi_trap_hack.o
 platform-objs-y += ../../src/trap.o
 platform-objs-y += ../../src/ipi.o
-
+platform-objs-y += ../../src/verify-int.o
 platform-objs-y += ../../src/sha3/sha3.o
 platform-objs-y += ../../src/ed25519/fe.o
 platform-objs-y += ../../src/ed25519/ge.o
