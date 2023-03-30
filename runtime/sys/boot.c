@@ -91,7 +91,6 @@ init_user_stack_and_env(ELF(Ehdr) *hdr)
   uintptr_t stack_end = EYRIE_USER_STACK_END;
   size_t stack_count = EYRIE_USER_STACK_SIZE >> RISCV_PAGE_BITS;
 
-
   // allocated stack pages right below the runtime
   count = alloc_pages(vpn(stack_end), stack_count,
       PTE_R | PTE_W | PTE_D | PTE_A | PTE_U);

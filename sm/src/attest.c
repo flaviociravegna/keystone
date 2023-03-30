@@ -193,7 +193,7 @@ unsigned long validate_and_hash_enclave(struct enclave* enclave) {
   }
 
   hash_finalize(enclave->hash, &hash_ctx);
-  compute_rt_eapp_hash(enclave);
+  compute_eapp_hash(enclave, 0);
 
   return SBI_ERR_SM_ENCLAVE_SUCCESS;
 }

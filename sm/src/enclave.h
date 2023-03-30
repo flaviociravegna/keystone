@@ -71,7 +71,9 @@ struct enclave
 
   /* measurement */
   byte hash[MDSIZE];
-  byte hash_runtime_and_eapp[MDSIZE];
+  //byte hash_runtime_and_eapp[MDSIZE];
+  byte hash_eapp_actual[MDSIZE];
+  byte hash_eapp_initial[MDSIZE];
   byte sign[SIGNATURE_SIZE];
 
   /* parameters */
@@ -136,6 +138,6 @@ unsigned long get_sealing_key(uintptr_t seal_key, uintptr_t key_ident, size_t ke
 
 /************ verification of the enclave at runtime ************/
 unsigned long verify_integrity_rt_eapp(int eid);
-void compute_rt_eapp_hash(struct enclave *enclave);
+void compute_eapp_hash(struct enclave *enclave, int at_runtime);
 int walk_pt_and_hash(struct enclave *enclave, hash_ctx *ctx_x_pages, uintptr_t *tb, uintptr_t vaddr, int contiguous, int level);
 #endif
