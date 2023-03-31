@@ -8,7 +8,7 @@
 #include <sbi/sbi_console.h>
 #include <sbi/riscv_asm.h>
 
-typedef uintptr_t pte_t;
+// typedef uintptr_t pte_t;
 /* This will walk the entire vaddr space in the enclave, validating
    linear at-most-once paddr mappings, and then hashing valid pages */
 int validate_and_hash_epm(hash_ctx* hash_ctx, int level,

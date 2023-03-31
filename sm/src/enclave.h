@@ -39,6 +39,9 @@ typedef enum {
 /* For now, eid's are a simple unsigned int */
 typedef unsigned int enclave_id;
 
+/* Page table entry type definition */
+typedef uintptr_t pte_t;
+
 /* Metadata around memory regions associate with this enclave
  * EPM is the 'home' for the enclave, contains runtime code/etc
  * UTM is the untrusted shared pages
@@ -139,5 +142,6 @@ unsigned long get_sealing_key(uintptr_t seal_key, uintptr_t key_ident, size_t ke
 /************ verification of the enclave at runtime ************/
 unsigned long verify_integrity_rt_eapp(int eid);
 void compute_eapp_hash(struct enclave *enclave, int at_runtime);
-int walk_pt_and_hash(struct enclave *enclave, hash_ctx *ctx_x_pages, uintptr_t *tb, uintptr_t vaddr, int contiguous, int level);
+int walk_pt_and_hash(struct enclave *enclave, hash_ctx *ctx_x_pages, pte_t *tb, uintptr_t vaddr, int contiguous, int level);
+
 #endif
