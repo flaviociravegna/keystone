@@ -67,6 +67,7 @@ struct enclave
   //spinlock_t lock; //local enclave lock. we don't need this until we have multithreaded enclave
   enclave_id eid; //enclave id
   unsigned long encl_satp; // enclave's page table base
+  unsigned long encl_satp_remap;
   enclave_state state; // global state of the enclave
 
   /* Physical memory regions associate with this enclave */

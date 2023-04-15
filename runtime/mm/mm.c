@@ -248,8 +248,7 @@ __map_with_reserved_page_table_64(uintptr_t dram_base,
   assert(IS_ALIGNED(ptr, RISCV_GET_LVL_PGSIZE_BITS(leaf_level - 1)));
 
   /* set root page table entry */
-  root_page_table[RISCV_GET_PT_INDEX(ptr, 1)] =
-    ptd_create(ppn(kernel_va_to_pa(l2_pt)));
+  root_page_table[RISCV_GET_PT_INDEX(ptr, 1)] = ptd_create(ppn(kernel_va_to_pa(l2_pt)));
 
   /* set L2 if it's not leaf */
   if (leaf_pt != l2_pt) {
@@ -258,18 +257,25 @@ __map_with_reserved_page_table_64(uintptr_t dram_base,
   }
 
   /* set leaf level */
-  for (offset = 0;
-       offset < dram_size;
-       offset += RISCV_GET_LVL_PGSIZE(leaf_level))
-  {
-      if (dram_base + offset < freemem_va_start)
-        leaf_pt[RISCV_GET_PT_INDEX(ptr + offset, leaf_level)] =
-          pte_create(ppn(dram_base + offset),
-              PTE_R | PTE_W | PTE_X | PTE_A | PTE_D);
-      else
-          leaf_pt[RISCV_GET_PT_INDEX(ptr + offset, leaf_level)] =
-          pte_create(ppn(dram_base + offset),
-              PTE_R | PTE_W | PTE_A | PTE_D);
+  uintptr_t freemem_pa_start = __pa(freemem_va_start);
+  for (offset = 0; offset < dram_size; offset += RISCV_GET_LVL_PGSIZE(leaf_level)) {
+      uintptr_t actual_pa = dram_base + offset;
+      uintptr_t actual_va = __va(actual_pa), actual_va_kernel = actual_pa + kernel_offset;
+      int flags = 0;
+
+      // order of physical addresses (low -> high):
+      // runtime | eapp | free
+      if (actual_pa < freemem_pa_start) {
+        if (actual_va_kernel >= runtime_va_text_start && actual_va_kernel < runtime_va_text_end)
+          flags = PTE_R | PTE_X | PTE_A | PTE_D;
+        else if (actual_va_kernel >= runtime_va_rodata_start && actual_va_kernel < runtime_va_rodata_end)
+          flags = PTE_R | PTE_A | PTE_D;
+        else
+          flags = PTE_R | PTE_W | PTE_A | PTE_D;
+      } else  // This is free memory section
+          flags = PTE_R | PTE_W | PTE_A | PTE_D;
+
+      leaf_pt[RISCV_GET_PT_INDEX(ptr + offset, leaf_level)] = pte_create(ppn(actual_pa), flags);
   }
 
 }

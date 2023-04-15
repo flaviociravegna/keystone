@@ -14,9 +14,13 @@ unsigned long ocall_print_string(char* string);
 
 int main(){
   int i;
+  int temp[1024*10];
   //ocall_print_string("Hello World");
-  for (i = 0; i < 5; i++)
-     verify_integrity_rt_eapp();
+  for (i = 0; i < 5; i++) {
+      verify_integrity_rt_eapp();
+      temp[i] = i;
+      temp[i]++;
+  }
 
   EAPP_RETURN(0);
 }

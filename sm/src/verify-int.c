@@ -11,44 +11,6 @@
 #include "page.h"
 #include "sm-sbi.h"
 
-#define SATP_PPN_MASK 0x00000fffffffffff
-
-/*
-static inline uintptr_t satp_to_pa(uintptr_t satp_val) {
-  return (satp_val & ((1UL << RISCV_PGLEVEL_BITS) - 1)) << RISCV_PAGE_BITS;
-}
-
-void* get_root_page_table_address(struct enclave *enclave) {
-        uintptr_t kernel_offset = enclave->params.runtime_entry - enclave->pa_params.runtime_base;
-        uintptr_t root_pt_addr = satp_to_pa(enclave->encl_satp_remap) + kernel_offset;
-        sbi_printf("\nPtr: 0x%lx\n", root_pt_addr);
-        return (void*)root_pt_addr;
-        return (void*)0xffffffffc0009000;
-}
-
-pte_t *pte_of_va(uintptr_t va, struct enclave *enclave) {
-    // satp_new(kernel_va_to_pa(root_page_table))
-    pte_t *t = (pte_t *)0xffffffffc0009000;
-    sbi_printf("\nRPT: 0x%lx\n", *t);
-
-    uintptr_t load_pa_start = enclave->pa_params.dram_base;
-    int i;
-    for (i = 1; i < RISCV_PT_LEVELS; i++) {
-        size_t idx = RISCV_GET_PT_INDEX(va, i);
-
-        if (!(t[idx] & PTE_V)) return 0;
-
-        t = (pte_t *)__va(pte_ppn(t[idx]) << RISCV_PGSHIFT, load_pa_start);
-    }
-
-    return &t[RISCV_GET_PT_INDEX(va, 3)];
-}
-*/
-
-void *pa_to_kernel_va(uintptr_t pa, uintptr_t kernel_offset) {
-    return (void *)(pa + kernel_offset);
-}
-
 // The physical page number of the root page table
 // is stored in the satp register’s PPN field
 // [4.1.11 of the RISCV reference pdf]
@@ -57,30 +19,6 @@ uintptr_t satp_to_pa(uintptr_t satp) {
     uintptr_t ppn = satp & SATP_PPN_MASK;
     return (ppn << RISCV_PGSHIFT);
 }
-/*
-pte_t *calculate_root_page_table(uintptr_t satp, uintptr_t kernel_offset) {
-    uintptr_t target_pa = satp_to_pa(satp);
-    void *target_va = pa_to_kernel_va(target_pa, kernel_offset);
-    sbi_printf("\nKernel offset  : 0x%lx", kernel_offset);
-    sbi_printf("\nRoot PT address: 0x%lx", (uintptr_t) target_va);
-    return (pte_t *)target_va;
-}
-
-void traverse_page_table(pte_t *pt, uintptr_t kernel_offset) {
-    for (int i = 0; i < 15; i++) {
-        pte_t pte = pt[i];
-        sbi_printf("ffff \n");
-        uintptr_t pa = (uintptr_t)pt + i * RISCV_PGSIZE;
-        sbi_printf("gggg \n");
-        if (pte & PTE_V) {
-            if (pte & PTE_R) {
-                sbi_printf("\nVisiting page at phys addr 0x%lx", pa);
-            } else {
-                traverse_page_table((pte_t *)pa_to_kernel_va((pte & PTE_PPN_SHIFT) << RISCV_PAGE_BITS, kernel_offset), kernel_offset);
-            }
-        }
-    }
-}*/
 
 /*
  * Iterate over PTEs and hash only the pages that are
@@ -114,7 +52,7 @@ int walk_pt_and_hash(struct enclave *enclave, hash_ctx *ctx_x_pages, pte_t *tb, 
 
         // if PTE is a leaf, read-only and not in UTM, extend hash for the page
         if (level == 1) {
-            if ((va_is_not_utm && is_read_only) || 1) {
+            if ((va_is_not_utm && is_read_only)) {
                 hash_extend_page(ctx_x_pages, (void *)phys_addr);
                 sbi_printf("\nPAGE hashed: [pa: 0x%lx, va: 0x%lx]\t", phys_addr, va_start);
                 sbi_printf("Permissions: R:%d, W:%d, X:%d",

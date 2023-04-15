@@ -8,10 +8,18 @@
 #include "mm/vm_defs.h"
 
 extern void* rt_base;
+extern void* rt_text_start;
+extern void* rt_text_end;
+extern void* rt_rodata_start;
+extern void* rt_rodata_end;
 
 extern uintptr_t runtime_va_start;
 extern uintptr_t kernel_offset;
 extern uintptr_t load_pa_start;
+extern uintptr_t runtime_va_text_start;
+extern uintptr_t runtime_va_text_end;
+extern uintptr_t runtime_va_rodata_start;
+extern uintptr_t runtime_va_rodata_end;
 
 /* Eyrie is for Sv39 */
 static inline uintptr_t satp_new(uintptr_t pa)
