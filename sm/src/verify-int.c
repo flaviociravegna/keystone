@@ -71,20 +71,12 @@ void compute_eapp_hash(struct enclave *enclave, int at_runtime) {
     hash_ctx ctx_x_pages;
     int i;
 
-    sbi_printf("[vaddr info]: \r\n\truntime: %lx\r\n\tuser: %lx\r\n\tuntrusted ptr: %lx\r\n\tuntrusted size: %lx\n\n",
-            enclave->params.runtime_entry,
-            enclave->params.user_entry,
-            enclave->params.untrusted_ptr,
-            enclave->params.untrusted_size);
-
     /*
         Supervisor Address Translation and Protection register
         has been updated at eyrie boot
     */
     enclave->encl_satp_remap = csr_read(satp);
     pte_t *new_pt = (pte_t *) satp_to_pa(enclave->encl_satp_remap);
-    //uintptr_t kernel_offset = enclave->params.runtime_entry - enclave->pa_params.runtime_base;
-    //traverse_page_table(new_pt, kernel_offset);
 
     hash_init(&ctx_x_pages);
     walk_pt_and_hash(enclave, &ctx_x_pages, new_pt, 0, 0, RISCV_PGLEVEL_TOP);

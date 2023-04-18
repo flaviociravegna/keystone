@@ -190,12 +190,42 @@ pte_of_va(uintptr_t va)
 
 
 void
+set_leaf_level(uintptr_t dram_base,
+              uintptr_t dram_size,
+              uintptr_t ptr,
+              uintptr_t leaf_level,
+              pte* leaf_pt)
+{
+  uintptr_t offset = 0;
+  uintptr_t freemem_pa_start = __pa(freemem_va_start);
+  
+  for (offset = 0; offset < dram_size; offset += RISCV_GET_LVL_PGSIZE(leaf_level)) {
+      uintptr_t actual_pa = dram_base + offset;
+      uintptr_t actual_va_kernel = actual_pa + kernel_offset;
+      int flags = 0;
+
+      // order of physical addresses (low -> high):
+      // runtime | eapp | free
+      if (actual_pa < freemem_pa_start) {
+        if (actual_va_kernel >= runtime_va_text_start && actual_va_kernel < runtime_va_text_end)
+          flags = PTE_R | PTE_X | PTE_A | PTE_D;
+        else if (actual_va_kernel >= runtime_va_rodata_start && actual_va_kernel < runtime_va_rodata_end)
+          flags = PTE_R | PTE_A | PTE_D;
+        else
+          flags = PTE_R | PTE_W | PTE_A | PTE_D;
+      } else  // This is free memory section
+          flags = PTE_R | PTE_W | PTE_A | PTE_D;
+
+      leaf_pt[RISCV_GET_PT_INDEX(ptr + offset, leaf_level)] = pte_create(ppn(actual_pa), flags);
+  }
+}
+
+void
 __map_with_reserved_page_table_32(uintptr_t dram_base,
                                uintptr_t dram_size,
                                uintptr_t ptr,
                                pte* l2_pt)
 {
-  uintptr_t offset = 0;
   uintptr_t leaf_level = 2;
   pte* leaf_pt = l2_pt;
   unsigned long dram_max =  RISCV_GET_LVL_PGSIZE(leaf_level - 1);
@@ -217,14 +247,8 @@ __map_with_reserved_page_table_32(uintptr_t dram_base,
        ptd_create(ppn(kernel_va_to_pa(l2_pt)));
   }
 
-  for (offset = 0;
-       offset < dram_size;
-       offset += RISCV_GET_LVL_PGSIZE(leaf_level))
-  {
-        leaf_pt[RISCV_GET_PT_INDEX(ptr + offset, leaf_level)] =
-        pte_create(ppn(dram_base + offset),
-                 PTE_R | PTE_W | PTE_X | PTE_A | PTE_D);
-  }
+  /* set leaf level */
+  set_leaf_level(dram_base, dram_size, ptr, leaf_level, leaf_pt);
 
 }
 
@@ -235,7 +259,6 @@ __map_with_reserved_page_table_64(uintptr_t dram_base,
                                pte* l2_pt,
                                pte* l3_pt)
 {
-  uintptr_t offset = 0;
   uintptr_t leaf_level = 3;
   pte* leaf_pt = l3_pt;
   /* use megapage if l3_pt is null */
@@ -257,27 +280,7 @@ __map_with_reserved_page_table_64(uintptr_t dram_base,
   }
 
   /* set leaf level */
-  uintptr_t freemem_pa_start = __pa(freemem_va_start);
-  for (offset = 0; offset < dram_size; offset += RISCV_GET_LVL_PGSIZE(leaf_level)) {
-      uintptr_t actual_pa = dram_base + offset;
-      uintptr_t actual_va = __va(actual_pa), actual_va_kernel = actual_pa + kernel_offset;
-      int flags = 0;
-
-      // order of physical addresses (low -> high):
-      // runtime | eapp | free
-      if (actual_pa < freemem_pa_start) {
-        if (actual_va_kernel >= runtime_va_text_start && actual_va_kernel < runtime_va_text_end)
-          flags = PTE_R | PTE_X | PTE_A | PTE_D;
-        else if (actual_va_kernel >= runtime_va_rodata_start && actual_va_kernel < runtime_va_rodata_end)
-          flags = PTE_R | PTE_A | PTE_D;
-        else
-          flags = PTE_R | PTE_W | PTE_A | PTE_D;
-      } else  // This is free memory section
-          flags = PTE_R | PTE_W | PTE_A | PTE_D;
-
-      leaf_pt[RISCV_GET_PT_INDEX(ptr + offset, leaf_level)] = pte_create(ppn(actual_pa), flags);
-  }
-
+  set_leaf_level(dram_base, dram_size, ptr, leaf_level, leaf_pt);
 }
 
 void
