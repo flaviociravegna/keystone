@@ -10,6 +10,7 @@
 #include <string>
 #include "./common.h"
 #include "./keystone_user.h"
+#include "../app/string.h"
 
 extern "C" {
 #include "./elf.h"
@@ -28,6 +29,7 @@ class ElfFile {
   size_t getTotalMemorySize() { return maxVaddr - minVaddr; }
   bool initialize(bool isRuntime);
 
+  unsigned int isRuntimeElf() { return (isRuntime ? 1 : 0); }
   unsigned int getPageMode() { return (isRuntime ? RT_FULL : USER_FULL); }
 
   /* libelf wrapper function */
@@ -35,6 +37,7 @@ class ElfFile {
   size_t getProgramHeaderType(size_t ph);
   size_t getProgramHeaderFileSize(size_t ph);
   size_t getProgramHeaderMemorySize(size_t ph);
+  uint32_t getProgramHeaderFlags(size_t ph);
   uintptr_t getProgramHeaderVaddr(size_t ph);
   uintptr_t getEntryPoint();
   void* getProgramSegment(size_t ph);

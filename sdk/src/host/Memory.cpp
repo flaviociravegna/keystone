@@ -73,24 +73,33 @@ Memory::allocPage(uintptr_t va, uintptr_t src, unsigned int mode) {
   *pFreeList += PAGE_SIZE;
 
   switch (mode) {
-    case USER_NOEXEC: {
-      *pte =
-          pte_create(page_addr, PTE_D | PTE_A | PTE_R | PTE_W | PTE_U | PTE_V);
-      break;
-    }
     case RT_NOEXEC: {
       *pte = pte_create(page_addr, PTE_D | PTE_A | PTE_R | PTE_W | PTE_V);
+      writeMem(src, (uintptr_t)page_addr << PAGE_BITS, PAGE_SIZE);
       break;
     }
     case RT_FULL: {
-      *pte =
-          pte_create(page_addr, PTE_D | PTE_A | PTE_R | PTE_W | PTE_X | PTE_V);
+      *pte = pte_create(page_addr, PTE_D | PTE_A | PTE_R | PTE_W | PTE_X | PTE_V);
       writeMem(src, (uintptr_t)page_addr << PAGE_BITS, PAGE_SIZE);
       break;
     }
     case USER_FULL: {
-      *pte = pte_create(
-          page_addr, PTE_D | PTE_A | PTE_R | PTE_W | PTE_X | PTE_U | PTE_V);
+      *pte = pte_create(page_addr, PTE_D | PTE_A | PTE_R | PTE_W | PTE_X | PTE_U | PTE_V);
+      writeMem(src, (uintptr_t)page_addr << PAGE_BITS, PAGE_SIZE);
+      break;
+    }
+    case USER_NOEXEC: {
+      *pte = pte_create(page_addr, PTE_D | PTE_A | PTE_R | PTE_W | PTE_U | PTE_V);
+      writeMem(src, (uintptr_t)page_addr << PAGE_BITS, PAGE_SIZE);
+      break;
+    }
+    case USER_READONLY: {
+      *pte = pte_create(page_addr, PTE_D | PTE_A | PTE_R | PTE_U | PTE_V);
+      writeMem(src, (uintptr_t)page_addr << PAGE_BITS, PAGE_SIZE);
+      break;
+    }
+    case USER_EXECONLY: {
+      *pte = pte_create(page_addr, PTE_D | PTE_A | PTE_R | PTE_X | PTE_U | PTE_V);
       writeMem(src, (uintptr_t)page_addr << PAGE_BITS, PAGE_SIZE);
       break;
     }

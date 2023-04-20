@@ -29,6 +29,10 @@
 #define RT_FULL 2
 #define USER_FULL 3
 #define UTM_FULL 4
+/******** NEW definitions ********/
+#define USER_READONLY 5
+#define USER_EXECONLY 6
+/*********************************/
 
 struct runtime_params_t {
   uintptr_t runtime_entry;

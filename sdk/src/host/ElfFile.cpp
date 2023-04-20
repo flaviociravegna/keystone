@@ -93,6 +93,11 @@ ElfFile::getProgramHeaderMemorySize(size_t ph) {
   return elf_getProgramHeaderMemorySize(&elf, ph);
 }
 
+uint32_t
+ElfFile::getProgramHeaderFlags(size_t ph) {
+  return elf_getProgramHeaderFlags(&elf, ph);
+}
+
 uintptr_t
 ElfFile::getProgramHeaderVaddr(size_t ph) {
   return elf_getProgramHeaderVaddr(&elf, ph);

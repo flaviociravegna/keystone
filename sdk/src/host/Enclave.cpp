@@ -83,13 +83,10 @@ Enclave::initStack(uintptr_t start, size_t size, bool is_rt) {
 
 bool
 Enclave::mapElf(ElfFile* elf) {
-  uintptr_t va;
-
   assert(elf);
 
-  size_t num_pages =
-      ROUND_DOWN(elf->getTotalMemorySize(), PAGE_BITS) / PAGE_SIZE;
-  va = elf->getMinVaddr();
+  size_t num_pages = ROUND_DOWN(elf->getTotalMemorySize(), PAGE_BITS) / PAGE_SIZE;
+  uintptr_t va = elf->getMinVaddr();
 
   if (pMemory->epmAllocVspace(va, num_pages) != num_pages) {
     ERROR("failed to allocate vspace\n");
@@ -105,11 +102,12 @@ Enclave::loadElf(ElfFile* elf) {
       0,
   };
 
-  unsigned int mode = elf->getPageMode();
+  unsigned int mode;
+  uint32_t flags, is_w, is_r, is_x;
+
   for (unsigned int i = 0; i < elf->getNumProgramHeaders(); i++) {
-    if (elf->getProgramHeaderType(i) != PT_LOAD) {
+    if (elf->getProgramHeaderType(i) != PT_LOAD)
       continue;
-    }
 
     uintptr_t start      = elf->getProgramHeaderVaddr(i);
     uintptr_t file_end   = start + elf->getProgramHeaderFileSize(i);
@@ -117,16 +115,38 @@ Enclave::loadElf(ElfFile* elf) {
     char* src            = reinterpret_cast<char*>(elf->getProgramSegment(i));
     uintptr_t va         = start;
 
+    
+    if (elf->isRuntimeElf())
+      mode = RT_FULL;
+    else {
+      flags = elf->getProgramHeaderFlags(i);
+      is_r = (flags & (1 << 2)) > 0;
+      is_w = (flags & (1 << 1)) > 0;
+      is_x = (flags & (1 << 0)) > 0;
+      
+      if (is_w && !is_x)
+        mode = USER_NOEXEC;
+      else if (is_x && !is_w)
+        mode = USER_EXECONLY;
+      else if (is_r && !is_w && !is_x)
+        mode = USER_READONLY;
+      else
+        mode = USER_FULL;
+    }
+
     /* FIXME: This is a temporary fix for loading iozone binary
      * which has a page-misaligned program header. */
     if (!IS_ALIGNED(va, PAGE_SIZE)) {
       size_t offset = va - PAGE_DOWN(va);
       size_t length = PAGE_UP(va) - va;
+
       char page[PAGE_SIZE];
       memset(page, 0, PAGE_SIZE);
       memcpy(page + offset, (const void*)src, length);
+
       if (!pMemory->allocPage(PAGE_DOWN(va), (uintptr_t)page, mode))
         return Error::PageAllocationFailure;
+
       va += length;
       src += length;
     }
@@ -140,14 +160,15 @@ Enclave::loadElf(ElfFile* elf) {
       va += PAGE_SIZE;
     }
 
-    /* next, load the page that has both initialized and uninitialized segments
-     */
+    /* next, load the page that has both initialized and uninitialized segments */
     if (va < file_end) {
       char page[PAGE_SIZE];
       memset(page, 0, PAGE_SIZE);
       memcpy(page, (const void*)src, static_cast<size_t>(file_end - va));
+
       if (!pMemory->allocPage(va, (uintptr_t)page, mode))
         return Error::PageAllocationFailure;
+
       va += PAGE_SIZE;
     }
 
@@ -365,6 +386,7 @@ Enclave::init(
     destroy();
     return Error::DeviceError;
   }
+  
   if (!mapUntrusted(params.getUntrustedSize())) {
     ERROR(
         "failed to finalize enclave - cannot obtain the untrusted buffer "
