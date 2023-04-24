@@ -128,6 +128,8 @@ eyrie_boot(uintptr_t dummy, // $a0 contains the return value from the SBI
   runtime_va_rodata_start = (uintptr_t) &rt_rodata_start;
   runtime_va_rodata_end = (uintptr_t) &rt_rodata_end;
 
+  eapp_pa_start = user_paddr;
+
   /*************************************************/
 
   debug("UTM : 0x%lx-0x%lx (%u KB)", utm_vaddr, utm_vaddr+utm_size, utm_size/1024);
@@ -147,6 +149,8 @@ eyrie_boot(uintptr_t dummy, // $a0 contains the return value from the SBI
 
   /* copy valid entries from the old page table */
   copy_root_page_table();
+
+  modify_eapp_pte_permissions();
 
   /* initialize free memory */
   init_freemem();

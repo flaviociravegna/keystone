@@ -7,6 +7,7 @@ uintptr_t runtime_va_text_start;
 uintptr_t runtime_va_text_end;
 uintptr_t runtime_va_rodata_start;
 uintptr_t runtime_va_rodata_end;
+uintptr_t eapp_pa_start;
 
 #ifdef USE_FREEMEM
 /* root page table */

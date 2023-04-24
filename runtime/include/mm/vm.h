@@ -21,6 +21,8 @@ extern uintptr_t runtime_va_text_end;
 extern uintptr_t runtime_va_rodata_start;
 extern uintptr_t runtime_va_rodata_end;
 
+extern uintptr_t eapp_pa_start;
+
 /* Eyrie is for Sv39 */
 static inline uintptr_t satp_new(uintptr_t pa)
 {

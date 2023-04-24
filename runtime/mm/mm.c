@@ -42,13 +42,20 @@ __walk_internal(pte* root, uintptr_t addr, int create)
   for (i = 1; i < RISCV_PT_LEVELS; i++)
   {
     size_t idx = RISCV_GET_PT_INDEX(addr, i);
+    //printf("\nPT Level: %d", i);
+    //printf("\npte: 0x%lx", t[idx]);
 
-    if (!(t[idx] & PTE_V))
+    //printf("\n Before accessing t [va: 0x%lx]...", t);
+    if (!(t[idx] & PTE_V)) {
       return create ? __continue_walk_create(root, addr, &t[idx]) : 0;
+    }
 
+    //printf("After accessing t...");
     t = (pte*) __va(pte_ppn(t[idx]) << RISCV_PAGE_BITS);
+    //printf("T mapped.");
   }
 
+  //printf("\nT final: %lx", t[RISCV_GET_PT_INDEX(addr, 3)]);
   return &t[RISCV_GET_PT_INDEX(addr, 3)];
 }
 
@@ -189,6 +196,99 @@ pte_of_va(uintptr_t va)
 }
 
 
+/*****************************************/
+
+uintptr_t satp_to_pa(uintptr_t satp) {
+    return (satp << RISCV_PAGE_BITS);
+}
+
+size_t pt_idx(uintptr_t addr, int level) {
+  size_t idx = addr >> (RISCV_PT_INDEX_BITS * level + RISCV_PAGE_BITS);
+  return idx & ((1 << RISCV_PT_INDEX_BITS) - 1);
+}
+
+pte* pte_of_va_from_ptbase(uintptr_t va) {
+  return __walk_internal((pte*) EYRIE_LOAD_START, va, 0);
+}
+
+pte * ept_walk_internal(uintptr_t addr) {
+  pte* t = (pte*) EYRIE_LOAD_START;
+
+  int i;
+
+  for (i = (VA_BITS - RISCV_PAGE_BITS) / RISCV_PT_INDEX_BITS - 1; i > 0; i--) {
+    size_t idx = pt_idx(addr, i); //pt_idx(addr, i);
+    if (!(t[idx] & PTE_V))
+      return 0;
+
+    t = (pte*)__va(pte_ppn(t[idx]) << RISCV_PAGE_BITS);
+  }
+
+  printf("\nAddr: 0x%lx, pt_addr: 0x%lx, pte: 0x%lx\n--------------------\n", addr, t, &t[pt_idx(addr, 0)]);
+  return &t[pt_idx(addr, 0)];
+}
+
+
+int walk_old_pt_and_update(pte *tb, uintptr_t vaddr, int contiguous, int level) {
+    uintptr_t phys_addr, va_start, vpn;
+    pte *walk, *end = tb + (RISCV_PAGE_SIZE / sizeof(pte));
+    int i;
+    
+    for (walk = tb, i = 0; walk < end; walk += 1, i++) {
+        //The runtime can only access virtual addresses
+        uintptr_t *walk_virt = (uintptr_t *)__va((uintptr_t)walk);
+        if (*walk_virt == 0) {
+            contiguous = 0;
+            continue;
+        }
+
+        if (level == RISCV_PGLEVEL_TOP && i & RISCV_PGTABLE_HIGHEST_BIT)
+            vpn = ((-1UL << RISCV_PT_INDEX_BITS) | (i & RISCV_PGLEVEL_MASK));
+        else
+            vpn = ((vaddr << RISCV_PT_INDEX_BITS) | (i & RISCV_PGLEVEL_MASK));
+
+        va_start = vpn << RISCV_PAGE_BITS;
+        phys_addr = (*walk_virt >> PTE_PPN_SHIFT) << RISCV_PAGE_BITS;
+
+        if (level == 1) {
+          pte *entry = pte_of_va(va_start);
+            if (phys_addr >= eapp_pa_start && phys_addr < __pa(freemem_va_start)) {
+              if (entry != 0) {
+                // Retrieve the permissions of the eapp, defined by the user
+                int is_r = (*walk_virt & PTE_R) > 0;
+                int is_w = (*walk_virt & PTE_W) > 0;
+                int is_x = (*walk_virt & PTE_X) > 0;
+
+                // now set these permissions to the  related page table entry
+                // defined by the runtime
+                *entry &= ~((uintptr_t)(PTE_R | PTE_W | PTE_X));
+                if (is_r) *entry |= PTE_R;
+                if (is_w) *entry |= PTE_W;
+                if (is_x) *entry |= PTE_X;
+              }
+            }
+
+            /*printf("\nAddr: [v: 0x%lx, p: 0x%lx], Permissions: R:%d, W:%d, X:%d",
+              va_start, phys_addr,
+              (*entry & PTE_R) > 0,
+              (*entry & PTE_W) > 0,
+              (*entry & PTE_X) > 0));*/
+            
+        } else  // otherwise, recurse on a lower level
+            contiguous = walk_old_pt_and_update((pte *)phys_addr, vpn, contiguous, level - 1);
+    }
+
+    return 1;
+}
+
+void modify_eapp_pte_permissions() {
+  printf("\nModifying permissions...");
+  walk_old_pt_and_update((pte *)__pa(EYRIE_LOAD_START), 0, 0, RISCV_PGLEVEL_TOP);
+}
+
+
+/******************************************/
+
 void
 set_leaf_level(uintptr_t dram_base,
               uintptr_t dram_size,
@@ -206,15 +306,20 @@ set_leaf_level(uintptr_t dram_base,
 
       // order of physical addresses (low -> high):
       // runtime | eapp | free
-      if (actual_pa < freemem_pa_start) {
+      if (actual_pa < eapp_pa_start) { 
+        // Runtime addresses
         if (actual_va_kernel >= runtime_va_text_start && actual_va_kernel < runtime_va_text_end)
           flags = PTE_R | PTE_X | PTE_A | PTE_D;
         else if (actual_va_kernel >= runtime_va_rodata_start && actual_va_kernel < runtime_va_rodata_end)
           flags = PTE_R | PTE_A | PTE_D;
         else
           flags = PTE_R | PTE_W | PTE_A | PTE_D;
-      } else  // This is free memory section
-          flags = PTE_R | PTE_W | PTE_A | PTE_D;
+      } else if (actual_pa < freemem_pa_start) {
+          // EAPP addresses
+          // TODO: modify the entry correctly here
+          flags = PTE_R | PTE_A | PTE_D;
+      } else
+          flags = PTE_R | PTE_W | PTE_A | PTE_D;  // Free memory addresses
 
       leaf_pt[RISCV_GET_PT_INDEX(ptr + offset, leaf_level)] = pte_create(ppn(actual_pa), flags);
   }
