@@ -7,9 +7,11 @@
 #if __riscv_xlen == 64
 #define RISCV_PT_INDEX_BITS 9
 #define RISCV_PT_LEVELS 3
+#define PTESIZE 8
 #elif __riscv_xlen == 32
 #define RISCV_PT_INDEX_BITS 10
 #define RISCV_PT_LEVELS 2
+#define PTESIZE 4
 #endif
 
 #define RISCV_PAGE_BITS 12
