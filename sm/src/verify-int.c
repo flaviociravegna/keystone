@@ -27,7 +27,7 @@ uintptr_t satp_to_pa(uintptr_t satp) {
  * "runtime_kernel_size" defined in runtime/runtime.ld.S
  */
 int walk_pt_and_hash(struct enclave *enclave, hash_ctx *ctx_x_pages, pte_t *tb, uintptr_t vaddr, int contiguous, int level) {
-    uintptr_t phys_addr, va_start, vpn;  //, runtime_kernel_size = 8 * RISCV_PGSIZE;
+    uintptr_t phys_addr, va_start, vpn, runtime_size;
     pte_t *walk, *end = tb + (RISCV_PGSIZE / sizeof(pte_t));
     int i, is_read_only, va_is_not_utm = 1;
 
@@ -53,12 +53,18 @@ int walk_pt_and_hash(struct enclave *enclave, hash_ctx *ctx_x_pages, pte_t *tb, 
         // if PTE is a leaf, read-only and not in UTM, extend hash for the page
         if (level == 1) {
             if ((va_is_not_utm && is_read_only)) {
-                hash_extend_page(ctx_x_pages, (void *)phys_addr);
-                sbi_printf("\nPAGE hashed: [pa: 0x%lx, va: 0x%lx]\t", phys_addr, va_start);
-                sbi_printf("Permissions: R:%d, W:%d, X:%d",
-                           (*walk & PTE_R) > 0,
-                           (*walk & PTE_W) > 0,
-                           (*walk & PTE_X) > 0);
+                runtime_size = enclave->pa_params.user_base - enclave->pa_params.runtime_base;
+                // The kernel is remapped at Eyrie boot, and then the entire memory is mapped.
+                // So, in order to not measure two times the same runtime pages, filter them 
+                // and consider only the addresses "remapped" by the Eyrie kernel
+                if (!(va_start >= enclave->params.runtime_entry && va_start < enclave->params.runtime_entry + runtime_size)) {
+                    hash_extend_page(ctx_x_pages, (void *)phys_addr);
+                    sbi_printf("\nPAGE hashed: [pa: 0x%lx, va: 0x%lx]\t", phys_addr, va_start);
+                    sbi_printf("Permissions: R:%d, W:%d, X:%d",
+                        (*walk & PTE_R) > 0,
+                        (*walk & PTE_W) > 0,
+                        (*walk & PTE_X) > 0);
+                }
             }
         } else  // otherwise, recurse on a lower level
             contiguous = walk_pt_and_hash(enclave, ctx_x_pages, (pte_t *)phys_addr, vpn, contiguous, level - 1);
@@ -87,7 +93,7 @@ void compute_eapp_hash(struct enclave *enclave, int at_runtime) {
             enclave->hash_eapp_initial[i] = enclave->hash_eapp_actual[i];
 
     uintptr_t count;
-    sbi_printf("\nHash of EAPP pages: 0x");
+    sbi_printf("\nHash of Runtime & EAPP pages: 0x");
     for (count = 0; count < sizeof enclave->hash_eapp_actual / sizeof(*enclave->hash_eapp_actual); count++)
         sbi_printf("%02x", enclave->hash_eapp_actual[count]);
     sbi_printf("\n");

@@ -42,17 +42,11 @@ __walk_internal(pte* root, uintptr_t addr, int create)
   for (i = 1; i < RISCV_PT_LEVELS; i++)
   {
     size_t idx = RISCV_GET_PT_INDEX(addr, i);
-    //printf("\nPT Level: %d", i);
-    //printf("\npte: 0x%lx", t[idx]);
-
-    //printf("\n Before accessing t [va: 0x%lx]...", t);
     if (!(t[idx] & PTE_V)) {
       return create ? __continue_walk_create(root, addr, &t[idx]) : 0;
     }
 
-    //printf("After accessing t...");
     t = (pte*) __va(pte_ppn(t[idx]) << RISCV_PAGE_BITS);
-    //printf("T mapped.");
   }
 
   //printf("\nT final: %lx", t[RISCV_GET_PT_INDEX(addr, 3)]);
@@ -198,36 +192,46 @@ pte_of_va(uintptr_t va)
 
 /*****************************************/
 
-uintptr_t satp_to_pa(uintptr_t satp) {
-    return (satp << RISCV_PAGE_BITS);
-}
+pte* get_old_pte_from_va(uintptr_t va) {
+  /*
+  uintptr_t vpn[RISCV_PT_LEVELS];
+  uintptr_t pte_offset[RISCV_PT_LEVELS];
+  uintptr_t pt_base = (uintptr_t)EYRIE_LOAD_START;
 
-size_t pt_idx(uintptr_t addr, int level) {
-  size_t idx = addr >> (RISCV_PT_INDEX_BITS * level + RISCV_PAGE_BITS);
-  return idx & ((1 << RISCV_PT_INDEX_BITS) - 1);
-}
+  vpn[0] = addr >> RISCV_PAGE_BITS & RISCV_PGLEVEL_MASK;
+  vpn[1] = addr >> (RISCV_PAGE_BITS + RISCV_PT_INDEX_BITS) & RISCV_PGLEVEL_MASK;
+  if (RISCV_PT_LEVELS == 3)
+    vpn[2] = addr >> (RISCV_PAGE_BITS + (2 * RISCV_PT_INDEX_BITS)) & RISCV_PGLEVEL_MASK;  
 
-pte* pte_of_va_from_ptbase(uintptr_t va) {
-  return __walk_internal((pte*) EYRIE_LOAD_START, va, 0);
-}
+  // calculate offsets for the page table levels
+  pte_offset[0] = (pt_base + vpn[RISCV_PT_LEVELS - 1] * PTESIZE) & 0xfffffffffff00000UL;
+  //if (!((uintptr_t)pte_offset[0] & PTE_V)) return 0;
+  
+  if (RISCV_PT_LEVELS == 3) {
+    pte_offset[1] = ((uintptr_t)pte_offset[0] + vpn[1] * PTESIZE);
+      //if (!((uintptr_t)pte_offset[0] & PTE_V)) return 0;
 
-pte * ept_walk_internal(uintptr_t addr) {
-  pte* t = (pte*) EYRIE_LOAD_START;
+    pte_offset[2] = ((uintptr_t)pte_offset[1] + vpn[0] * PTESIZE);
+  } else
+    pte_offset[1] = ((uintptr_t)pte_offset[0] + vpn[0] * PTESIZE);
+  
+  // extract the page table entry pointer from the offset
+  return (pte *)((uintptr_t)pte_offset[RISCV_PT_LEVELS - 1] + (addr & (RISCV_PAGE_SIZE - 1) >> 2));*/
+  pte *pt = (pte *)EYRIE_LOAD_START;
+  int level;
 
-  int i;
-
-  for (i = (VA_BITS - RISCV_PAGE_BITS) / RISCV_PT_INDEX_BITS - 1; i > 0; i--) {
-    size_t idx = pt_idx(addr, i); //pt_idx(addr, i);
-    if (!(t[idx] & PTE_V))
-      return 0;
-
-    t = (pte*)__va(pte_ppn(t[idx]) << RISCV_PAGE_BITS);
+  for (level = RISCV_PT_LEVELS - 1; level >= 0; level--) {
+    uintptr_t index = (va >> (RISCV_PAGE_BITS + level * RISCV_PT_INDEX_BITS)) & RISCV_PGLEVEL_MASK;
+    printf("\nIndex: 0x%lx", index, (uintptr_t)pt + index);
+    pte entry = pt[index];
+    printf(", entry: 0x%lx", entry);
+    //if ((entry & PTE_V) == 0) return 0;
+    
+    pt = (pte *)(entry & ~(RISCV_PGLEVEL_MASK));
   }
 
-  printf("\nAddr: 0x%lx, pt_addr: 0x%lx, pte: 0x%lx\n--------------------\n", addr, t, &t[pt_idx(addr, 0)]);
-  return &t[pt_idx(addr, 0)];
+  return &pt[(va >> RISCV_PAGE_BITS) & RISCV_PGLEVEL_MASK];
 }
-
 
 int walk_old_pt_and_update(pte *tb, uintptr_t vaddr, int contiguous, int level) {
     uintptr_t phys_addr, va_start, vpn;
@@ -237,6 +241,7 @@ int walk_old_pt_and_update(pte *tb, uintptr_t vaddr, int contiguous, int level) 
     for (walk = tb, i = 0; walk < end; walk += 1, i++) {
         //The runtime can only access virtual addresses
         uintptr_t *walk_virt = (uintptr_t *)__va((uintptr_t)walk);
+        //printf("\nWalk: [v: 0x%lx, p: 0x%lx]", walk_virt, walk);
         if (*walk_virt == 0) {
             contiguous = 0;
             continue;
@@ -251,29 +256,33 @@ int walk_old_pt_and_update(pte *tb, uintptr_t vaddr, int contiguous, int level) 
         phys_addr = (*walk_virt >> PTE_PPN_SHIFT) << RISCV_PAGE_BITS;
 
         if (level == 1) {
-          pte *entry = pte_of_va(va_start);
-            if (phys_addr >= eapp_pa_start && phys_addr < __pa(freemem_va_start)) {
-              if (entry != 0) {
-                // Retrieve the permissions of the eapp, defined by the user
-                int is_r = (*walk_virt & PTE_R) > 0;
-                int is_w = (*walk_virt & PTE_W) > 0;
-                int is_x = (*walk_virt & PTE_X) > 0;
+          if (phys_addr >= eapp_pa_start && phys_addr < __pa(freemem_va_start)) {
+            pte *entry = pte_of_va(va_start);
+            if (entry != 0) {
+              // Retrieve the permissions of the eapp, defined by the user
+              int is_r = (*walk_virt & PTE_R) > 0;
+              int is_w = (*walk_virt & PTE_W) > 0;
+              int is_x = (*walk_virt & PTE_X) > 0;
 
-                // now set these permissions to the  related page table entry
-                // defined by the runtime
-                *entry &= ~((uintptr_t)(PTE_R | PTE_W | PTE_X));
-                if (is_r) *entry |= PTE_R;
-                if (is_w) *entry |= PTE_W;
-                if (is_x) *entry |= PTE_X;
-              }
-            }
+              // now set these permissions to the related page table entry
+              // defined by the runtime
+              *entry &= ~((uintptr_t)(PTE_R | PTE_W | PTE_X));
+              if (is_r) *entry |= PTE_R;
+              if (is_w) *entry |= PTE_W;
+              if (is_x) *entry |= PTE_X;
 
-            /*printf("\nAddr: [v: 0x%lx, p: 0x%lx], Permissions: R:%d, W:%d, X:%d",
+              /*
+              printf("\nAddr: [v: 0x%lx, p: 0x%lx], Permissions: R:%d, W:%d, X:%d, old_pte: [a: 0x%lx, pte: 0x%lx]",
               va_start, phys_addr,
               (*entry & PTE_R) > 0,
               (*entry & PTE_W) > 0,
-              (*entry & PTE_X) > 0));*/
-            
+              (*entry & PTE_X) > 0,
+              walk_virt, *walk_virt);*/
+
+              //pte *old_e = get_old_pte_from_va(va_start);
+              //printf("\nRetrieved pte: [a: 0x%lx, pte: 0x%lx]]\n****************************************************\n", old_e, *old_e);
+            }
+          }
         } else  // otherwise, recurse on a lower level
             contiguous = walk_old_pt_and_update((pte *)phys_addr, vpn, contiguous, level - 1);
     }
@@ -282,7 +291,6 @@ int walk_old_pt_and_update(pte *tb, uintptr_t vaddr, int contiguous, int level) 
 }
 
 void modify_eapp_pte_permissions() {
-  printf("\nModifying permissions...");
   walk_old_pt_and_update((pte *)__pa(EYRIE_LOAD_START), 0, 0, RISCV_PGLEVEL_TOP);
 }
 
@@ -305,8 +313,8 @@ set_leaf_level(uintptr_t dram_base,
       int flags = 0;
 
       // order of physical addresses (low -> high):
-      // runtime | eapp | free
-      if (actual_pa < eapp_pa_start) { 
+      // runtime | eapp | free      
+      if (actual_pa < eapp_pa_start) {
         // Runtime addresses
         if (actual_va_kernel >= runtime_va_text_start && actual_va_kernel < runtime_va_text_end)
           flags = PTE_R | PTE_X | PTE_A | PTE_D;
@@ -317,7 +325,19 @@ set_leaf_level(uintptr_t dram_base,
       } else if (actual_pa < freemem_pa_start) {
           // EAPP addresses
           // TODO: modify the entry correctly here
-          flags = PTE_R | PTE_A | PTE_D;
+          /*pte *entry_old_root_pt = get_old_pte_from_va(__va(actual_pa));
+          if (entry_old_root_pt == 0)
+            printf("\n ZERO");
+          else {
+            printf("\nEntry found! ");
+            printf("\nAddr: [v: 0x%lx, p: 0x%lx], Addr pte: 0x%lx",
+              __va(actual_pa), actual_pa, entry_old_root_pt);
+            printf(", Permissions: R:%d, W:%d, X:%d",
+              (*entry_old_root_pt & PTE_R) > 0,
+              (*entry_old_root_pt & PTE_W) > 0,
+              (*entry_old_root_pt & PTE_X) > 0);
+          }*/
+          flags = PTE_R | PTE_W | PTE_A | PTE_D;
       } else
           flags = PTE_R | PTE_W | PTE_A | PTE_D;  // Free memory addresses
 
