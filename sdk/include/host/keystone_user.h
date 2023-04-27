@@ -32,6 +32,8 @@
 /******** NEW definitions ********/
 #define USER_READONLY 5
 #define USER_EXECONLY 6
+#define RT_READONLY 7
+#define RT_EXECONLY 8
 /*********************************/
 
 struct runtime_params_t {

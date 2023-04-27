@@ -133,7 +133,12 @@ int validate_and_hash_epm(hash_ctx* hash_ctx, int level,
 
       /* if PTE is leaf, extend hash for the page */
       hash_extend_page(hash_ctx, (void*)phys_addr);
-
+      /*sbi_printf("\n Addr: [p: 0x%lx, v: 0x%lx], perm: [R: %d, W: %d, X: %d]]",
+              phys_addr, va_start,
+              (*walk & PTE_R) > 0,
+              (*walk & PTE_W) > 0,
+              (*walk & PTE_X) > 0
+            );*/
 
 
       //printm("PAGE hashed: 0x%lx (pa: 0x%lx)\n", vpn << RISCV_PGSHIFT, phys_addr);
@@ -183,6 +188,7 @@ unsigned long validate_and_hash_enclave(struct enclave* enclave) {
   uintptr_t user_max_seen=0;
 
   // hash the epm contents including the virtual addresses
+  //sbi_printf("\nSATP FROM SM: 0x%lx, PADDR: 0x%lx", enclave->encl_satp, (enclave->encl_satp << RISCV_PGSHIFT));
   int valid = validate_and_hash_epm(&hash_ctx,
                                     ptlevel,
                                     (pte_t*) (enclave->encl_satp << RISCV_PGSHIFT),
@@ -193,7 +199,7 @@ unsigned long validate_and_hash_enclave(struct enclave* enclave) {
   }
 
   hash_finalize(enclave->hash, &hash_ctx);
-  //compute_eapp_hash(enclave, 0);
+  compute_eapp_hash(enclave, 0);
 
   return SBI_ERR_SM_ENCLAVE_SUCCESS;
 }

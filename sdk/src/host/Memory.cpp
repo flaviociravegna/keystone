@@ -83,6 +83,16 @@ Memory::allocPage(uintptr_t va, uintptr_t src, unsigned int mode) {
       writeMem(src, (uintptr_t)page_addr << PAGE_BITS, PAGE_SIZE);
       break;
     }
+    case RT_READONLY: {
+      *pte = pte_create(page_addr, PTE_D | PTE_A | PTE_R | PTE_V);
+      writeMem(src, (uintptr_t)page_addr << PAGE_BITS, PAGE_SIZE);
+      break;
+    }
+    case RT_EXECONLY: {
+      *pte = pte_create(page_addr, PTE_D | PTE_A | PTE_R | PTE_X | PTE_V);
+      writeMem(src, (uintptr_t)page_addr << PAGE_BITS, PAGE_SIZE);
+      break;
+    }
     case USER_FULL: {
       *pte = pte_create(page_addr, PTE_D | PTE_A | PTE_R | PTE_W | PTE_X | PTE_U | PTE_V);
       writeMem(src, (uintptr_t)page_addr << PAGE_BITS, PAGE_SIZE);
@@ -128,10 +138,12 @@ Memory::__ept_continue_walk_create(uintptr_t addr, pte* pte) {
 pte*
 Memory::__ept_walk_internal(uintptr_t addr, int create) {
   pte* t = reinterpret_cast<pte*>(rootPageTable);
+  //printf("\nRoot page table addr: 0x%lx", rootPageTable);
 
   int i;
   for (i = (VA_BITS - RISCV_PGSHIFT) / RISCV_PGLEVEL_BITS - 1; i > 0; i--) {
     size_t idx = pt_idx(addr, i);
+    
     if (!(pte_val(t[idx]) & PTE_V)) {
       return create ? __ept_continue_walk_create(addr, &t[idx]) : 0;
     }
@@ -140,6 +152,7 @@ Memory::__ept_walk_internal(uintptr_t addr, int create) {
         reinterpret_cast<uintptr_t>(pte_ppn(t[idx]) << RISCV_PGSHIFT),
         PAGE_SIZE));
   }
+  
   return &t[pt_idx(addr, 0)];
 }
 

@@ -26,7 +26,7 @@ uintptr_t satp_to_pa(uintptr_t satp) {
  *
  * "runtime_kernel_size" defined in runtime/runtime.ld.S
  */
-int walk_pt_and_hash(struct enclave *enclave, hash_ctx *ctx_x_pages, pte_t *tb, uintptr_t vaddr, int contiguous, int level) {
+int walk_pt_and_hash(struct enclave *enclave, hash_ctx *ctx_x_pages, pte_t *tb, uintptr_t vaddr, int contiguous, int level, int at_runtime) {
     uintptr_t phys_addr, va_start, vpn, runtime_size;
     pte_t *walk, *end = tb + (RISCV_PGSIZE / sizeof(pte_t));
     int i, is_read_only, va_is_not_utm = 1;
@@ -57,7 +57,7 @@ int walk_pt_and_hash(struct enclave *enclave, hash_ctx *ctx_x_pages, pte_t *tb, 
                 // The kernel is remapped at Eyrie boot, and then the entire memory is mapped.
                 // So, in order to not measure two times the same runtime pages, filter them 
                 // and consider only the addresses "remapped" by the Eyrie kernel
-                if (!(va_start >= enclave->params.runtime_entry && va_start < enclave->params.runtime_entry + runtime_size)) {
+                if (!at_runtime || !(va_start >= enclave->params.runtime_entry && va_start < enclave->params.runtime_entry + runtime_size)) {
                     hash_extend_page(ctx_x_pages, (void *)phys_addr);
                     sbi_printf("\nPAGE hashed: [pa: 0x%lx, va: 0x%lx]\t", phys_addr, va_start);
                     sbi_printf("Permissions: R:%d, W:%d, X:%d",
@@ -67,7 +67,7 @@ int walk_pt_and_hash(struct enclave *enclave, hash_ctx *ctx_x_pages, pte_t *tb, 
                 }
             }
         } else  // otherwise, recurse on a lower level
-            contiguous = walk_pt_and_hash(enclave, ctx_x_pages, (pte_t *)phys_addr, vpn, contiguous, level - 1);
+            contiguous = walk_pt_and_hash(enclave, ctx_x_pages, (pte_t *)phys_addr, vpn, contiguous, level - 1, at_runtime);
     }
 
     return 1;
@@ -82,19 +82,19 @@ void compute_eapp_hash(struct enclave *enclave, int at_runtime) {
         has been updated at eyrie boot
     */
     enclave->encl_satp_remap = csr_read(satp);
-    pte_t *new_pt = (pte_t *) satp_to_pa(enclave->encl_satp_remap);
+    pte_t *new_pt = at_runtime ? (pte_t *) satp_to_pa(enclave->encl_satp_remap) : (pte_t *) satp_to_pa(enclave->encl_satp);
 
     hash_init(&ctx_x_pages);
-    walk_pt_and_hash(enclave, &ctx_x_pages, new_pt, 0, 0, RISCV_PGLEVEL_TOP);
-    hash_finalize(enclave->hash_eapp_actual, &ctx_x_pages);
+    walk_pt_and_hash(enclave, &ctx_x_pages, new_pt, 0, 0, RISCV_PGLEVEL_TOP, at_runtime);
+    hash_finalize(enclave->hash_rt_eapp_actual, &ctx_x_pages);
 
     if (!at_runtime)
         for (i = 0; i < MDSIZE; i++)
-            enclave->hash_eapp_initial[i] = enclave->hash_eapp_actual[i];
+            enclave->hash_rt_eapp_initial[i] = enclave->hash_rt_eapp_actual[i];
 
     uintptr_t count;
     sbi_printf("\nHash of Runtime & EAPP pages: 0x");
-    for (count = 0; count < sizeof enclave->hash_eapp_actual / sizeof(*enclave->hash_eapp_actual); count++)
-        sbi_printf("%02x", enclave->hash_eapp_actual[count]);
+    for (count = 0; count < sizeof enclave->hash_rt_eapp_actual / sizeof(*enclave->hash_rt_eapp_actual); count++)
+        sbi_printf("%02x", enclave->hash_rt_eapp_actual[count]);
     sbi_printf("\n");
 }

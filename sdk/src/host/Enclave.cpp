@@ -115,24 +115,19 @@ Enclave::loadElf(ElfFile* elf) {
     char* src            = reinterpret_cast<char*>(elf->getProgramSegment(i));
     uintptr_t va         = start;
 
+    flags = elf->getProgramHeaderFlags(i);
+    is_r = (flags & (1 << 2)) > 0;
+    is_w = (flags & (1 << 1)) > 0;
+    is_x = (flags & (1 << 0)) > 0;
     
-    if (elf->isRuntimeElf())
-      mode = RT_FULL;
-    else {
-      flags = elf->getProgramHeaderFlags(i);
-      is_r = (flags & (1 << 2)) > 0;
-      is_w = (flags & (1 << 1)) > 0;
-      is_x = (flags & (1 << 0)) > 0;
-      
-      if (is_w && !is_x)
-        mode = USER_NOEXEC;
-      else if (is_x && !is_w)
-        mode = USER_EXECONLY;
-      else if (is_r && !is_w && !is_x)
-        mode = USER_READONLY;
-      else
-        mode = USER_FULL;
-    }
+    if (is_w && !is_x)
+      mode = elf->isRuntimeElf() ? RT_NOEXEC : USER_NOEXEC;
+    else if (is_x && !is_w)
+      mode = elf->isRuntimeElf() ? RT_EXECONLY : USER_EXECONLY;
+    else if (is_r && !is_w && !is_x)
+      mode = elf->isRuntimeElf() ? RT_READONLY : USER_READONLY;
+    else
+      mode = elf->isRuntimeElf() ? RT_FULL : USER_FULL;
 
     /* FIXME: This is a temporary fix for loading iozone binary
      * which has a page-misaligned program header. */
