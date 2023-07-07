@@ -20,6 +20,24 @@ uintptr_t satp_to_pa(uintptr_t satp) {
     return (ppn << RISCV_PGSHIFT);
 }
 
+void print_hash(struct enclave *enclave) {
+    uintptr_t count;
+    sbi_printf("\nHash of Runtime & EAPP pages: 0x");
+    for (count = 0; count < sizeof enclave->hash_rt_eapp_actual / sizeof(*enclave->hash_rt_eapp_actual); count++)
+        sbi_printf("%02x", enclave->hash_rt_eapp_actual[count]);
+    sbi_printf("\n");
+}
+
+int compare_digests(struct enclave *enclave) {
+    uintptr_t count;
+    for (count = 0; count < sizeof enclave->hash_rt_eapp_actual / sizeof(*enclave->hash_rt_eapp_actual); count++)
+        if (enclave->hash_rt_eapp_actual[count] != enclave->hash_rt_eapp_initial[count]) {
+            sbi_printf("%02x", enclave->hash_rt_eapp_actual[count]);
+            return 0;
+        }
+    return 1;
+}
+
 /*
  * Iterate over PTEs and hash only the pages that are
  * in the eapp address space
@@ -59,11 +77,11 @@ int walk_pt_and_hash(struct enclave *enclave, hash_ctx *ctx_x_pages, pte_t *tb, 
                 // and consider only the addresses "remapped" by the Eyrie kernel
                 if (!at_runtime || !(va_start >= enclave->params.runtime_entry && va_start < enclave->params.runtime_entry + runtime_size)) {
                     hash_extend_page(ctx_x_pages, (void *)phys_addr);
-                    sbi_printf("\nPAGE hashed: [pa: 0x%lx, va: 0x%lx]\t", phys_addr, va_start);
+                    /*sbi_printf("\nPAGE hashed: [pa: 0x%lx, va: 0x%lx]\t", phys_addr, va_start);
                     sbi_printf("Permissions: R:%d, W:%d, X:%d",
                         (*walk & PTE_R) > 0,
                         (*walk & PTE_W) > 0,
-                        (*walk & PTE_X) > 0);
+                        (*walk & PTE_X) > 0);*/
                 }
             }
         } else  // otherwise, recurse on a lower level
@@ -91,10 +109,7 @@ void compute_eapp_hash(struct enclave *enclave, int at_runtime) {
     if (!at_runtime)
         for (i = 0; i < MDSIZE; i++)
             enclave->hash_rt_eapp_initial[i] = enclave->hash_rt_eapp_actual[i];
-
-    uintptr_t count;
-    sbi_printf("\nHash of Runtime & EAPP pages: 0x");
-    for (count = 0; count < sizeof enclave->hash_rt_eapp_actual / sizeof(*enclave->hash_rt_eapp_actual); count++)
-        sbi_printf("%02x", enclave->hash_rt_eapp_actual[count]);
-    sbi_printf("\n");
+    else if (compare_digests(enclave) == 0)
+        sbi_printf("\nIntegrity check failed: the memory of some non-writable page of the enclave has changed.\n");
+    //print_hash(enclave);
 }

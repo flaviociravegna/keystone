@@ -193,30 +193,6 @@ pte_of_va(uintptr_t va)
 /*****************************************/
 
 pte* get_old_pte_from_va(uintptr_t va) {
-  /*
-  uintptr_t vpn[RISCV_PT_LEVELS];
-  uintptr_t pte_offset[RISCV_PT_LEVELS];
-  uintptr_t pt_base = (uintptr_t)EYRIE_LOAD_START;
-
-  vpn[0] = addr >> RISCV_PAGE_BITS & RISCV_PGLEVEL_MASK;
-  vpn[1] = addr >> (RISCV_PAGE_BITS + RISCV_PT_INDEX_BITS) & RISCV_PGLEVEL_MASK;
-  if (RISCV_PT_LEVELS == 3)
-    vpn[2] = addr >> (RISCV_PAGE_BITS + (2 * RISCV_PT_INDEX_BITS)) & RISCV_PGLEVEL_MASK;  
-
-  // calculate offsets for the page table levels
-  pte_offset[0] = (pt_base + vpn[RISCV_PT_LEVELS - 1] * PTESIZE) & 0xfffffffffff00000UL;
-  //if (!((uintptr_t)pte_offset[0] & PTE_V)) return 0;
-  
-  if (RISCV_PT_LEVELS == 3) {
-    pte_offset[1] = ((uintptr_t)pte_offset[0] + vpn[1] * PTESIZE);
-      //if (!((uintptr_t)pte_offset[0] & PTE_V)) return 0;
-
-    pte_offset[2] = ((uintptr_t)pte_offset[1] + vpn[0] * PTESIZE);
-  } else
-    pte_offset[1] = ((uintptr_t)pte_offset[0] + vpn[0] * PTESIZE);
-  
-  // extract the page table entry pointer from the offset
-  return (pte *)((uintptr_t)pte_offset[RISCV_PT_LEVELS - 1] + (addr & (RISCV_PAGE_SIZE - 1) >> 2));*/
   pte *pt = (pte *)EYRIE_LOAD_START;
   int level;
 
@@ -247,9 +223,10 @@ int walk_old_pt_and_update(pte *tb, uintptr_t vaddr, int contiguous, int level) 
             continue;
         }
 
-        if (level == RISCV_PGLEVEL_TOP && i & RISCV_PGTABLE_HIGHEST_BIT)
+        if (level == RISCV_PGLEVEL_TOP && i & RISCV_PGTABLE_HIGHEST_BIT) {
+            //printf("\nFIRST IF");
             vpn = ((-1UL << RISCV_PT_INDEX_BITS) | (i & RISCV_PGLEVEL_MASK));
-        else
+        } else
             vpn = ((vaddr << RISCV_PT_INDEX_BITS) | (i & RISCV_PGLEVEL_MASK));
 
         va_start = vpn << RISCV_PAGE_BITS;
@@ -271,8 +248,8 @@ int walk_old_pt_and_update(pte *tb, uintptr_t vaddr, int contiguous, int level) 
               if (is_w) *entry |= PTE_W;
               if (is_x) *entry |= PTE_X;
 
-              /*
-              printf("\nAddr: [v: 0x%lx, p: 0x%lx], Permissions: R:%d, W:%d, X:%d, old_pte: [a: 0x%lx, pte: 0x%lx]",
+              
+              /*printf("\nAddr: [v: 0x%lx, p: 0x%lx], Permissions: R:%d, W:%d, X:%d, old_pte: [a: 0x%lx, pte: 0x%lx]",
               va_start, phys_addr,
               (*entry & PTE_R) > 0,
               (*entry & PTE_W) > 0,
