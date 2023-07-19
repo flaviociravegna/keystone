@@ -179,7 +179,9 @@ eyrie_boot(uintptr_t dummy, // $a0 contains the return value from the SBI
   /* Enable the FPU */
   csr_write(sstatus, csr_read(sstatus) | 0x6000);
 
-  debug("eyrie boot finished. drop to the user land ...");
+  //printf("\n*************************\neyrie boot finished. drop to the user land ...");
+  //printf("\n[runtime] new SATP: %lu", csr_read(satp));
+  debug("\neyrie boot finished. drop to the user land ...");
   /* booting all finished, droping to the user land */
   return;
 }

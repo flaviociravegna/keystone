@@ -10,6 +10,19 @@ namespace Keystone {
 KeystoneDevice::KeystoneDevice() { eid = -1; }
 
 Error
+KeystoneDevice::runtime_attestation(uintptr_t *ret) {
+  struct keystone_ioctl_create_enclave encl;
+  encl.eid = eid;
+
+  if (ioctl(fd, KEYSTONE_IOC_RUNTIME_ATTESTATION, &encl)) {
+    perror("ioctl error");
+    eid = -1;
+    return Error::IoctlErrorRuntimeAttestation;
+  }
+  return Error::Success;
+}
+
+Error
 KeystoneDevice::create(uint64_t minPages) {
   struct keystone_ioctl_create_enclave encl;
   encl.min_pages = minPages;

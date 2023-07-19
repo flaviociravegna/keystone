@@ -70,12 +70,15 @@ struct enclave
   unsigned long encl_satp_remap;
   enclave_state state; // global state of the enclave
 
+  unsigned long encl_timer_start;
+  unsigned long msec_to_wait;
+  unsigned long delta_freq;
+
   /* Physical memory regions associate with this enclave */
   struct enclave_region regions[ENCLAVE_REGIONS_MAX];
 
   /* measurement */
   byte hash[MDSIZE];
-  //byte hash_runtime_and_eapp[MDSIZE];
   byte hash_rt_eapp_actual[MDSIZE];
   byte hash_rt_eapp_initial[MDSIZE];
   byte sign[SIGNATURE_SIZE];

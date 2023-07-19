@@ -48,6 +48,9 @@ static int sbi_ecall_keystone_enclave_handler(unsigned long extid, unsigned long
       retval = sbi_sm_resume_enclave((struct sbi_trap_regs*) regs, regs->a0);
       __builtin_unreachable();
       break;
+    case SBI_SM_RUNTIME_ATTESTATION:
+      retval = sbi_sm_runtime_attestation((struct sbi_trap_regs*) regs, regs->a0);
+      break;
     case SBI_SM_RANDOM:
       *out_val = sbi_sm_random();
       retval = 0;
@@ -78,7 +81,6 @@ static int sbi_ecall_keystone_enclave_handler(unsigned long extid, unsigned long
   }
 
   return retval;
-
 }
 
 struct sbi_ecall_extension ecall_keystone_enclave = {

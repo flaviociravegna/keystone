@@ -419,6 +419,7 @@ unsigned long create_enclave(unsigned long *eidptr, struct keystone_sbi_create c
 
   /* Validate memory, prepare hash and signature for attestation */
   spin_lock(&encl_lock); // FIXME This should error for second enter.
+
   ret = validate_and_hash_enclave(&enclaves[eid]);
   /* The enclave is fresh if it has been validated and hashed but not run yet. */
   if (ret)
@@ -427,7 +428,7 @@ unsigned long create_enclave(unsigned long *eidptr, struct keystone_sbi_create c
   enclaves[eid].state = FRESH;
   /* EIDs are unsigned int in size, copy via simple copy */
   *eidptr = eid;
-
+ 
   spin_unlock(&encl_lock);
   return SBI_ERR_SM_ENCLAVE_SUCCESS;
 
@@ -563,6 +564,16 @@ unsigned long stop_enclave(struct sbi_trap_regs *regs, uint64_t request, enclave
   int stoppable;
 
   spin_lock(&encl_lock);
+
+  // Keep track of the remapped root page table, assigned at Eyrie Boot.
+  // This operation must be performed AFTER the enclave is launched, in
+  // order to retrieve the new satp value (i.e., when the enclave performs
+  // a ecall or is interrupted)
+  if (cpu_is_enclave_context()) {
+    enclaves[eid].encl_satp_remap = csr_read(satp);
+    //sbi_printf("\n Updated SATP: %lu", csr_read(satp));
+  }
+
   stoppable = enclaves[eid].state == RUNNING;
   if (stoppable) {
     enclaves[eid].n_thread--;
@@ -692,8 +703,9 @@ unsigned long get_sealing_key(uintptr_t sealing_key, uintptr_t key_ident,
 
 
 unsigned long verify_integrity_rt_eapp(int eid) {
-    sbi_printf("\nComputing the hash...\n");
+    spin_lock(&encl_lock);
     compute_eapp_hash(&enclaves[eid], 1);
-    sbi_printf("Operation completed\n\n");
+    spin_unlock(&encl_lock); 
+    // TODO: return an error if the initial and actual digests are not equal
     return SBI_ERR_SM_ENCLAVE_SUCCESS;
 }

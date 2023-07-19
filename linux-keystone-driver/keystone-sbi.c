@@ -23,3 +23,9 @@ struct sbiret sbi_sm_resume_enclave(unsigned long eid) {
       SBI_SM_RESUME_ENCLAVE,
       eid, 0, 0, 0, 0, 0);
 }
+
+struct sbiret sbi_sm_runtime_attestation_enclave(unsigned long eid) {
+  return sbi_ecall(KEYSTONE_SBI_EXT_ID,
+      SBI_SM_RUNTIME_ATTESTATION,
+      eid, 0, 0, 0, 0, 0);
+}
