@@ -42,6 +42,10 @@ struct sbiret sbi_sm_destroy_enclave(unsigned long eid);
 struct sbiret sbi_sm_run_enclave(unsigned long eid);
 struct sbiret sbi_sm_resume_enclave(unsigned long eid);
 /************** NEW SBI **************/
-struct sbiret sbi_sm_runtime_attestation_enclave(unsigned long eid);
+struct sbiret sbi_sm_runtime_attestation_enclave(
+  struct report_t *report,
+  unsigned long nonce,
+  unsigned long size
+);
 
 #endif

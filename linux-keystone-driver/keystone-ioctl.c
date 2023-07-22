@@ -225,28 +225,40 @@ int keystone_resume_enclave(unsigned long data)
 /*********************************************/
 
 int keystone_runtime_attestation(unsigned long data) {
+  int retval = 0;
   struct sbiret ret;
   struct keystone_ioctl_runtime_attestation *arg = (struct keystone_ioctl_runtime_attestation*) data;
-  unsigned long ueid = arg->eid;
-  struct enclave* enclave;
-  enclave = get_enclave_by_id(ueid);
+  struct enclave* enclave = get_enclave_by_id(arg->eid);
+  struct report_t *report = kmalloc(sizeof(struct report_t), GFP_KERNEL);
+  struct report_t report_from_ioctl_params = arg->attestation_report;
+
+  if (!report) {
+    keystone_err("failed to allocate report struct\n");
+    retval = -ENOMEM;
+    goto error_no_free;
+  }
 
   if (!enclave) {
     keystone_err("invalid enclave id\n");
-    return -EINVAL;
+    retval = -EINVAL;
+    goto error;
   }
 
   if (enclave->eid < 0) {
     keystone_err("real enclave does not exist\n");
-    return -EINVAL;
+    retval = -EINVAL;
+    goto error;
   }
 
-  ret = sbi_sm_runtime_attestation_enclave(enclave->eid);
-
+  report->enclave.data_len = 7;
+  ret = sbi_sm_runtime_attestation_enclave(report, arg->nonce, arg->size);
+  arg->attestation_report = *report;
   arg->error = ret.error;
-  arg->value = ret.value;
 
-  return 0;
+error:
+  kfree(report);
+error_no_free:
+  return retval;
 }
 
 /*********************************************/
@@ -256,7 +268,7 @@ int keystone_runtime_attestation(unsigned long data) {
 long keystone_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
 {
   long ret;
-  char data[512];
+  char data[2048];
 
   size_t ioc_size;
 

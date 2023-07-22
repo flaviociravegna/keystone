@@ -70,10 +70,6 @@ struct enclave
   unsigned long encl_satp_remap;
   enclave_state state; // global state of the enclave
 
-  unsigned long encl_timer_start;
-  unsigned long msec_to_wait;
-  unsigned long delta_freq;
-
   /* Physical memory regions associate with this enclave */
   struct enclave_region regions[ENCLAVE_REGIONS_MAX];
 
@@ -144,7 +140,10 @@ uintptr_t get_enclave_region_size(enclave_id eid, int memid);
 unsigned long get_sealing_key(uintptr_t seal_key, uintptr_t key_ident, size_t key_ident_size, enclave_id eid);
 
 /************ verification of the enclave at runtime ************/
+unsigned long copy_enclave_report_runtime_attestation_into_sm(uintptr_t src, struct report* dest);
+unsigned long copy_enclave_report_runtime_attestation_from_sm(struct report* src, uintptr_t dest);
 unsigned long verify_integrity_rt_eapp(int eid);
+unsigned long attest_integrity_at_runtime(struct report *report, uintptr_t data, uintptr_t size, enclave_id eid);
 void compute_eapp_hash(struct enclave *enclave, int at_runtime);
 
 #endif

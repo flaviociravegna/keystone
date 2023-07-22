@@ -10,7 +10,6 @@
 #include <string>
 #include "./common.h"
 #include "./keystone_user.h"
-#include "../app/string.h"
 
 extern "C" {
 #include "./elf.h"

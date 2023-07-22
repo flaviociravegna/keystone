@@ -22,7 +22,7 @@ uintptr_t satp_to_pa(uintptr_t satp) {
 
 void print_hash(struct enclave *enclave) {
     uintptr_t count;
-    sbi_printf("\nHash of Runtime & EAPP pages: 0x");
+    sbi_printf("\n[SM] Hash of Runtime & EAPP pages: 0x");
     for (count = 0; count < sizeof enclave->hash_rt_eapp_actual / sizeof(*enclave->hash_rt_eapp_actual); count++)
         sbi_printf("%02x", enclave->hash_rt_eapp_actual[count]);
     sbi_printf("\n");
@@ -77,7 +77,7 @@ int walk_pt_and_hash(struct enclave *enclave, hash_ctx *ctx_x_pages, pte_t *tb, 
                 // and consider only the addresses "remapped" by the Eyrie kernel
                 if (!at_runtime || !(va_start >= enclave->params.runtime_entry && va_start < enclave->params.runtime_entry + runtime_size)) {
                     hash_extend_page(ctx_x_pages, (void *)phys_addr);
-                    /*sbi_printf("\nPAGE hashed: [pa: 0x%lx, va: 0x%lx]\tPermissions: R:%d, W:%d, X:%d\n",
+                    /*sbi_printf("\n[SM] PAGE hashed: [pa: 0x%lx, va: 0x%lx]\tPermissions: R:%d, W:%d, X:%d\n",
                         phys_addr, va_start,
                         (*walk & PTE_R) > 0,
                         (*walk & PTE_W) > 0,
@@ -95,24 +95,17 @@ void compute_eapp_hash(struct enclave *enclave, int at_runtime) {
     hash_ctx ctx_x_pages;
     int i;
 
-    /*
-        Supervisor Address Translation and Protection register
-        has been updated at eyrie boot
-    */
-    //enclave->encl_satp_remap = csr_read(satp);
+    /* Supervisor Address Translation and Protection register
+        has been updated at eyrie boot */
     pte_t *new_pt = at_runtime ? (pte_t *) satp_to_pa(enclave->encl_satp_remap) : (pte_t *) satp_to_pa(enclave->encl_satp);
-    //sbi_printf("\n[I: %lu, F: %lu]\n", enclave->encl_satp, enclave->encl_satp_remap);
     hash_init(&ctx_x_pages);
     walk_pt_and_hash(enclave, &ctx_x_pages, new_pt, 0, 0, RISCV_PGLEVEL_TOP, at_runtime);
     hash_finalize(enclave->hash_rt_eapp_actual, &ctx_x_pages);
 
-    if (!at_runtime) {
-        sbi_printf("\nComputed EAPP runtime attestation golden value");
+    if (!at_runtime)
         for (i = 0; i < MDSIZE; i++)
             enclave->hash_rt_eapp_initial[i] = enclave->hash_rt_eapp_actual[i];
-    } else
-        sbi_printf("\nComputed EAPP runtime attestation...");
-        //else if (compare_digests(enclave) == 0)
+    else
+        sbi_printf("[SM] Computed EAPP runtime attestation\n");
         //sbi_printf("\nIntegrity check failed: the memory of some non-writable page of the enclave has changed.\n");
-    print_hash(enclave);
 }

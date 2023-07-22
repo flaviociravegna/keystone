@@ -70,10 +70,24 @@ unsigned long sbi_sm_stop_enclave(struct sbi_trap_regs *regs, unsigned long requ
   return 0;
 }
 
-unsigned long sbi_sm_runtime_attestation(struct sbi_trap_regs *regs, unsigned long eid) {
-  sbi_printf("\nVerifying runtime integrity of the enclave application...");
-  verify_integrity_rt_eapp(cpu_get_enclave_id());
-  return 0;
+unsigned long sbi_sm_runtime_attestation(uintptr_t report, uintptr_t data, uintptr_t size) {
+  struct report report_local;
+  unsigned long ret = copy_enclave_report_runtime_attestation_into_sm(report, &report_local);  
+  
+  if (ret) {
+    sbi_printf("[SM] Error while copying runtime attestation report\n");
+    return ret;
+  }
+  
+  ret = attest_integrity_at_runtime(&report_local, data, size, cpu_get_enclave_id());
+  if (ret)
+    return ret;
+
+  ret = copy_enclave_report_runtime_attestation_from_sm(&report_local, report);
+  if (ret)
+    sbi_printf("[SM] Error while copying runtime attestation report\n");
+    
+  return ret;
 }
 
 unsigned long sbi_sm_attest_enclave(uintptr_t report, uintptr_t data, uintptr_t size)

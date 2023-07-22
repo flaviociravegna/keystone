@@ -75,11 +75,15 @@ static inline void context_switch_to_enclave(struct sbi_trap_regs* regs,
 
   switch_vector_enclave();
 
+  //sbi_printf("1\n");
   // set PMP
   osm_pmp_set(PMP_NO_PERM);
+  //sbi_printf("2\n");
   int memid;
   for(memid=0; memid < ENCLAVE_REGIONS_MAX; memid++) {
+    //sbi_printf("3\n");
     if(enclaves[eid].regions[memid].type != REGION_INVALID) {
+      //sbi_printf("4\n");
       pmp_set_keystone(enclaves[eid].regions[memid].pmp_rid, PMP_ALL_PERM);
     }
   }
@@ -273,6 +277,20 @@ static unsigned long copy_enclave_report(struct enclave* enclave,
     return SBI_ERR_SM_ENCLAVE_SUCCESS;
 }
 
+unsigned long copy_enclave_report_runtime_attestation_into_sm(uintptr_t src, struct report* dest) {
+  if (copy_to_sm(dest, src, sizeof(struct report)))
+    return SBI_ERR_SM_ENCLAVE_ILLEGAL_ARGUMENT;
+  else
+    return SBI_ERR_SM_ENCLAVE_SUCCESS;
+}
+
+unsigned long copy_enclave_report_runtime_attestation_from_sm(struct report* src, uintptr_t dest) {
+  if (copy_from_sm(dest, src, sizeof(struct report)))
+    return SBI_ERR_SM_ENCLAVE_ILLEGAL_ARGUMENT;
+  else
+    return SBI_ERR_SM_ENCLAVE_SUCCESS;
+}
+
 static int is_create_args_valid(struct keystone_sbi_create* args)
 {
   uintptr_t epm_start, epm_end;
@@ -285,15 +303,6 @@ static int is_create_args_valid(struct keystone_sbi_create* args)
   /*        args->runtime_paddr, */
   /*        args->user_paddr, */
   /*        args->free_paddr); */
-  sbi_printf("[create args info]: \r\n\tepm_addr: %lx\r\n\tepmsize: %lx\r\n\tutm_addr: %lx\r\n\tutmsize: %lx\r\n\truntime_addr: %lx\r\n\tuser_addr: %lx\r\n\tfree_addr: %lx\r\n",
-            args->epm_region.paddr,
-            args->epm_region.size,
-            args->utm_region.paddr,
-            args->utm_region.size,
-            args->runtime_paddr,
-            args->user_paddr,
-            args->free_paddr);
-  sbi_printf("\n");
 
   // check if physical addresses are valid
   if (args->epm_region.size <= 0)
@@ -565,17 +574,16 @@ unsigned long stop_enclave(struct sbi_trap_regs *regs, uint64_t request, enclave
 
   spin_lock(&encl_lock);
 
-  // Keep track of the remapped root page table, assigned at Eyrie Boot.
-  // This operation must be performed AFTER the enclave is launched, in
-  // order to retrieve the new satp value (i.e., when the enclave performs
-  // a ecall or is interrupted)
-  if (cpu_is_enclave_context()) {
-    enclaves[eid].encl_satp_remap = csr_read(satp);
-    //sbi_printf("\n Updated SATP: %lu", csr_read(satp));
-  }
-
   stoppable = enclaves[eid].state == RUNNING;
   if (stoppable) {
+    // Keep track of the remapped root page table, assigned at Eyrie Boot.
+    // This operation must be performed AFTER the enclave is launched, in
+    // order to retrieve the new satp value
+    if (cpu_is_enclave_context())
+      enclaves[eid].encl_satp_remap = csr_read(satp);
+
+    sbi_printf("[SM] SATP: %lu\n", csr_read(satp));
+
     enclaves[eid].n_thread--;
     if(enclaves[eid].n_thread == 0)
       enclaves[eid].state = STOPPED;
@@ -701,11 +709,49 @@ unsigned long get_sealing_key(uintptr_t sealing_key, uintptr_t key_ident,
   return SBI_ERR_SM_ENCLAVE_SUCCESS;
 }
 
+unsigned long verify_integrity_rt_eapp(int eid) { return 0; }
 
-unsigned long verify_integrity_rt_eapp(int eid) {
-    spin_lock(&encl_lock);
-    compute_eapp_hash(&enclaves[eid], 1);
-    spin_unlock(&encl_lock); 
-    // TODO: return an error if the initial and actual digests are not equal
-    return SBI_ERR_SM_ENCLAVE_SUCCESS;
+unsigned long attest_integrity_at_runtime(
+    struct report *report,
+    uintptr_t data,
+    uintptr_t size,
+    enclave_id eid) {
+  int ret = 0;
+
+  if (size > ATTEST_DATA_MAXLEN)
+    return SBI_ERR_SM_ENCLAVE_ILLEGAL_ARGUMENT;
+
+  spin_lock(&encl_lock);
+
+  if(!(ENCLAVE_EXISTS(eid) && (enclaves[eid].state == STOPPED || enclaves[eid].state == RUNNING))) {
+    ret = SBI_ERR_SM_ENCLAVE_NOT_EXECUTION_TIME;
+    goto err_unlock;
+  }
+
+  /* copy data to be signed */
+  // TODO
+  report->enclave.data_len = size;
+
+  /* compute hash of the read only enclave pages
+     and save it in the associated enclave struct */
+  compute_eapp_hash(&enclaves[eid], 1);
+
+  sbi_memcpy(report->dev_public_key, dev_public_key, PUBLIC_KEY_SIZE);
+  sbi_memcpy(report->sm.hash, sm_hash, MDSIZE);
+  sbi_memcpy(report->sm.public_key, sm_public_key, PUBLIC_KEY_SIZE);
+  sbi_memcpy(report->sm.signature, sm_signature, SIGNATURE_SIZE);
+  sbi_memcpy(report->enclave.hash, enclaves[eid].hash_rt_eapp_actual, MDSIZE);
+  sm_sign(report->enclave.signature, &report->enclave, sizeof(struct enclave_report) - SIGNATURE_SIZE - ATTEST_DATA_MAXLEN + size);
+
+  if (ret) {
+    ret = SBI_ERR_SM_ENCLAVE_ILLEGAL_ARGUMENT;
+    goto err_unlock;
+  }
+
+  ret = SBI_ERR_SM_ENCLAVE_SUCCESS;
+
+err_unlock:
+  spin_unlock(&encl_lock);
+  
+  return ret;
 }

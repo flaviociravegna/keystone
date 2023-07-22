@@ -4,6 +4,8 @@
 //------------------------------------------------------------------------------
 #include "KeystoneDevice.hpp"
 #include <sys/mman.h>
+#include <cstdio>
+#include "../verifier/report.h"
 
 namespace Keystone {
 
@@ -11,14 +13,25 @@ KeystoneDevice::KeystoneDevice() { eid = -1; }
 
 Error
 KeystoneDevice::runtime_attestation(uintptr_t *ret) {
-  struct keystone_ioctl_create_enclave encl;
-  encl.eid = eid;
+  struct keystone_ioctl_runtime_attestation params;
 
-  if (ioctl(fd, KEYSTONE_IOC_RUNTIME_ATTESTATION, &encl)) {
+  params.eid = eid;
+  params.size = sizeof(unsigned long);
+  params.nonce = random();
+  printf("[HOST] Nonce generated at host: %lu", params.nonce);
+
+  if (ioctl(fd, KEYSTONE_IOC_RUNTIME_ATTESTATION, &params)) {
     perror("ioctl error");
     eid = -1;
     return Error::IoctlErrorRuntimeAttestation;
   }
+  
+  printf("\n[HOST] enclave hash copied into report: 0x");
+  int count;
+  for (count = 0; count < sizeof(params.attestation_report.enclave.hash) / sizeof(*params.attestation_report.enclave.hash); count++)
+    printf("%02x", params.attestation_report.enclave.hash[count]);
+  printf("\n");
+
   return Error::Success;
 }
 

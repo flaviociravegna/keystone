@@ -7,6 +7,7 @@
 
 #include <linux/ioctl.h>
 #include <linux/types.h>
+#include "../verifier/report.h"
 // Linux generic TEE subsystem magic defined in <linux/tee.h>
 #define KEYSTONE_IOC_MAGIC 0xa4
 
@@ -81,7 +82,9 @@ struct keystone_ioctl_run_enclave {
 struct keystone_ioctl_runtime_attestation {
   uintptr_t eid;
   uintptr_t error;
-  uintptr_t value;
+  unsigned long nonce;
+  unsigned long size;
+  struct report_t attestation_report;
 };
 
 #endif
