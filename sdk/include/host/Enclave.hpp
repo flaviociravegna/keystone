@@ -16,6 +16,10 @@
 #include <functional>
 #include <iostream>
 
+#include <thread>
+#include <mutex>
+#include <condition_variable>
+
 #include "./common.h"
 extern "C" {
 #include "common/sha3.h"
@@ -42,6 +46,7 @@ class Enclave {
   uintptr_t runtime_stk_sz;
   void* shared_buffer;
   size_t shared_buffer_size;
+  report_t* runtime_attestation_report;
   OcallFunc oFuncDispatch;
   bool mapUntrusted(size_t size);
   bool allocPage(uintptr_t va, uintptr_t src, unsigned int mode);
@@ -56,12 +61,17 @@ class Enclave {
   bool prepareEnclave(uintptr_t alternatePhysAddr);
   bool initMemory();
 
+  /*std::mutex mtx;
+  std::condition_variable cv;
+  bool is_runtime_attestation_requested;*/
+
  public:
   Enclave();
   ~Enclave();
   const char* getHash();
   void* getSharedBuffer();
   size_t getSharedBufferSize();
+  report_t* getRuntimeAttestationReport();
   Error registerOcallDispatch(OcallFunc func);
   Error init(const char* filepath, const char* runtime, Params parameters);
   Error init(
@@ -69,6 +79,8 @@ class Enclave {
       uintptr_t alternatePhysAddr);
   Error destroy();
   Error run(uintptr_t* ret = nullptr);
+  Error run_with_runtime_attestation_support(uintptr_t* retval);
+  void requestRuntimeAttestation();
 };
 
 uint64_t

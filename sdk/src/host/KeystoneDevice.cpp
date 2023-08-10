@@ -12,13 +12,13 @@ namespace Keystone {
 KeystoneDevice::KeystoneDevice() { eid = -1; }
 
 Error
-KeystoneDevice::runtime_attestation(uintptr_t *ret) {
+KeystoneDevice::runtime_attestation(report_t *report) {
   struct keystone_ioctl_runtime_attestation params;
-
   params.eid = eid;
   params.size = sizeof(unsigned long);
   params.nonce = random();
-  printf("[HOST] Nonce generated at host: %lu", params.nonce);
+  
+  //printf("[HOST] Nonce generated at host: %lu", params.nonce);
 
   if (ioctl(fd, KEYSTONE_IOC_RUNTIME_ATTESTATION, &params)) {
     perror("ioctl error");
@@ -26,11 +26,13 @@ KeystoneDevice::runtime_attestation(uintptr_t *ret) {
     return Error::IoctlErrorRuntimeAttestation;
   }
   
-  printf("\n[HOST] enclave hash copied into report: 0x");
+  memcpy(report, &(params.attestation_report), sizeof(params.attestation_report));
+  /*printf("\n[HOST] enclave hash copied into report: 0x");
   int count;
-  for (count = 0; count < sizeof(params.attestation_report.enclave.hash) / sizeof(*params.attestation_report.enclave.hash); count++)
-    printf("%02x", params.attestation_report.enclave.hash[count]);
-  printf("\n");
+  for (count = 0; count < sizeof(report->enclave.hash) / sizeof(*report->enclave.hash); count++)
+    printf("%02x", report->enclave.hash[count]);
+  printf("\n");*/
+
 
   return Error::Success;
 }

@@ -75,15 +75,11 @@ static inline void context_switch_to_enclave(struct sbi_trap_regs* regs,
 
   switch_vector_enclave();
 
-  //sbi_printf("1\n");
   // set PMP
   osm_pmp_set(PMP_NO_PERM);
-  //sbi_printf("2\n");
   int memid;
   for(memid=0; memid < ENCLAVE_REGIONS_MAX; memid++) {
-    //sbi_printf("3\n");
     if(enclaves[eid].regions[memid].type != REGION_INVALID) {
-      //sbi_printf("4\n");
       pmp_set_keystone(enclaves[eid].regions[memid].pmp_rid, PMP_ALL_PERM);
     }
   }
@@ -582,7 +578,7 @@ unsigned long stop_enclave(struct sbi_trap_regs *regs, uint64_t request, enclave
     if (cpu_is_enclave_context())
       enclaves[eid].encl_satp_remap = csr_read(satp);
 
-    sbi_printf("[SM] SATP: %lu\n", csr_read(satp));
+    //sbi_printf("[SM] SATP: %lu\n", csr_read(satp));
 
     enclaves[eid].n_thread--;
     if(enclaves[eid].n_thread == 0)

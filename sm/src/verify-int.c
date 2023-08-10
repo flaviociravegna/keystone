@@ -105,7 +105,7 @@ void compute_eapp_hash(struct enclave *enclave, int at_runtime) {
     if (!at_runtime)
         for (i = 0; i < MDSIZE; i++)
             enclave->hash_rt_eapp_initial[i] = enclave->hash_rt_eapp_actual[i];
-    else
-        sbi_printf("[SM] Computed EAPP runtime attestation\n");
+    //else
+        //sbi_printf("[SM] Computed EAPP runtime attestation\n");
         //sbi_printf("\nIntegrity check failed: the memory of some non-writable page of the enclave has changed.\n");
 }
