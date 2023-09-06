@@ -47,6 +47,7 @@ class Enclave {
   void* shared_buffer;
   size_t shared_buffer_size;
   report_t* runtime_attestation_report;
+
   OcallFunc oFuncDispatch;
   bool mapUntrusted(size_t size);
   bool allocPage(uintptr_t va, uintptr_t src, unsigned int mode);
@@ -81,6 +82,7 @@ class Enclave {
   Error run(uintptr_t* ret = nullptr);
   Error run_with_runtime_attestation_support(uintptr_t* retval);
   void requestRuntimeAttestation();
+  void requestCertChain(unsigned char *cert_sm, unsigned char *cert_root, unsigned char *cert_man, int *lengths);
 };
 
 uint64_t

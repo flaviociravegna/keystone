@@ -78,6 +78,11 @@ set(buildroot_config ${confdir}/qemu_riscv${BITS}_virt_defconfig)
 set(overlay_dir ${CMAKE_BINARY_DIR}/overlay)
 set(overlay_root ${overlay_dir}/root)
 
+get_property(dirs DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY INCLUDE_DIRECTORIES)
+foreach(dir ${dirs})
+  message(STATUS "dir='${dir}'")
+endforeach()
+
 if(firesim)
   message(STATUS "Using Linux defconfig: ${linux_defconfig}")
 	set(initramfs true)

@@ -19,6 +19,7 @@ enum class Error {
   IoctlErrorResume,
   IoctlErrorUTMInit,
   IoctlErrorRuntimeAttestation,
+  IoctlErrorGetCertChain,
   DeviceMemoryMapError,
   ELFLoadFailure,
   InvalidEnclave,

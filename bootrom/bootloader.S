@@ -25,6 +25,8 @@ reset:
 
   /* secure boot */
   call bootloader
+  mv s10, a0
+  //beqz s10, endp
 
   /* clear_stack_from_bottom */
   li t1, STACK_BOTTOM
@@ -46,7 +48,7 @@ boot:
   la a1, _dtb
 	# ld a1, DTB(sp)
   li t0, DRAM_BASE
-  jr t0
+  jr t0 //jump to the security monitor starts
 
 loop:
   LOAD t1, INIT(sp)
@@ -64,7 +66,7 @@ clear_all_but_sp:
   mv s1, x0
   mv a0, x0
   mv a1, x0
-  mv a2, x0
+  //mv a2, x0
   mv a3, x0
   mv a4, x0
   mv a5, x0
@@ -78,10 +80,17 @@ clear_all_but_sp:
   mv s7, x0
   mv s8, x0
   mv s9, x0
-  mv s10, x0
+  //mv s10, x0
   mv s11, x0
   mv t3, x0
   mv t4, x0
   mv t5, x0
   mv t6, x0
   jr ra
+  mv a2, x0
+
+
+  endp:
+    //ret
+    li t0, DRAM_BASE
+    jr t0 //jump to the security monitor starts

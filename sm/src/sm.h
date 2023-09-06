@@ -21,6 +21,7 @@
 #define SBI_SM_RUN_ENCLAVE        2003
 #define SBI_SM_RESUME_ENCLAVE     2005
 #define SBI_SM_RUNTIME_ATTESTATION 2006
+#define SBI_SM_GET_CHAIN_AND_LAK  2007
 #define FID_RANGE_HOST            2999
 /* 3000-3999 are called by enclave */
 #define SBI_SM_RANDOM             3001
@@ -28,6 +29,9 @@
 #define SBI_SM_GET_SEALING_KEY    3003
 #define SBI_SM_STOP_ENCLAVE       3004
 #define SBI_SM_EXIT_ENCLAVE       3006
+#define SBI_CREATE_KEYPAIR        3007
+#define SBI_GET_CHAIN             3008
+#define SBI_CRYPTO_INTERFACE      3009
 // For the moment keep it simple
 #define SBI_SM_VERIFY_INTEGRITY_RT_EAPP 3100
 #define FID_RANGE_ENCLAVE         3999
@@ -66,6 +70,8 @@
 #define SBI_ERR_SM_PMP_REGION_INVALID                  100024
 #define SBI_ERR_SM_PMP_REGION_OVERLAP                  100025
 #define SBI_ERR_SM_PMP_REGION_IMPOSSIBLE_TOR           100026
+
+#define SM_DICE_DEBUG 0
 
 void sm_init(bool cold_boot);
 

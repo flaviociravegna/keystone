@@ -8,6 +8,7 @@
 #include <linux/types.h>
 #include <linux/ioctl.h>
 #include "keystone-runtime-attestation.h"
+#include "keystone-cert-chain.h"
 // Linux generic TEE subsystem magic defined in <linux/tee.h>
 #define KEYSTONE_IOC_MAGIC  0xa4
 
@@ -26,6 +27,8 @@
   _IOR(KEYSTONE_IOC_MAGIC, 0x07, struct keystone_ioctl_create_enclave)
 #define KEYSTONE_IOC_RUNTIME_ATTESTATION \
   _IOR(KEYSTONE_IOC_MAGIC, 0x08, struct keystone_ioctl_runtime_attestation)
+#define KEYSTONE_IOC_GET_CHERT_CHAIN_AND_LAK \
+  _IOR(KEYSTONE_IOC_MAGIC, 0x09, struct keystone_ioctl_cert_chain)
 
 #define RT_NOEXEC 0
 #define USER_NOEXEC 1

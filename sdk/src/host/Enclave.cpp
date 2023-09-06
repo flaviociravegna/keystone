@@ -476,15 +476,15 @@ Enclave::run_with_runtime_attestation_support(uintptr_t* retval) {
   Error ret = pDevice->run(retval);
 
   while (ret == Error::EdgeCallHost || ret == Error::EnclaveInterrupted) {
-    if (ret == Error::EnclaveInterrupted) {
+    //if (ret == Error::EnclaveInterrupted) {
       /*std::unique_lock<std::mutex> lock(mtx); // RAII pattern
       cv.wait(lock, [this]{ return is_runtime_attestation_requested; });
 
       std::cout << "Runtime attestation request accepted. Doing something..." << std::endl;
       ret_runtime_attest = pDevice->runtime_attestation(retval, getRuntimeAttestationReport());*/
       //is_runtime_attestation_requested = false; // Reset the flag
-      std::cout << "enclave interrupted" << std::endl;
-    }
+      //std::cout << "enclave interrupted" << std::endl;
+    //}
 
     /* enclave is stopped in the middle. */
     if (ret == Error::EdgeCallHost && oFuncDispatch != NULL) {
@@ -520,9 +520,12 @@ Enclave::getRuntimeAttestationReport() {
 
 void
 Enclave::requestRuntimeAttestation() {
-  //std::lock_guard<std::mutex> lock(mtx);
   Error retval = pDevice->runtime_attestation(getRuntimeAttestationReport());
-  //cv.notify_one();
+}
+
+void
+Enclave::requestCertChain(unsigned char *cert_sm, unsigned char *cert_root, unsigned char *cert_man, int *lengths) {
+  Error retval = pDevice->get_cert_chain_and_lak(cert_sm, cert_root, cert_man, lengths);
 }
 
 Error

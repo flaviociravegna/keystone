@@ -11,6 +11,9 @@
 // Statically allocated copy-buffer
 unsigned char rt_copy_buffer_1[RISCV_PAGE_SIZE];
 unsigned char rt_copy_buffer_2[RISCV_PAGE_SIZE];
+unsigned char rt_copy_buffer_3[RISCV_PAGE_SIZE];
+uintptr_t tmp_copy_buf_vec[3];
+int sizes[3];
 
 size_t rt_util_getrandom(void* vaddr, size_t buflen){
   size_t remaining = buflen;

@@ -1,8 +1,54 @@
+diff --git firmware/fw_base.S firmware/fw_base.S
+index 07be4c4..c6bb263 100644
+--- firmware/fw_base.S
++++ firmware/fw_base.S
+@@ -498,7 +498,14 @@ _skip_trap_exit_rv32_hyp:
+ 
+ 	/* Initialize SBI runtime */
+ 	csrr	a0, CSR_MSCRATCH
++	beqz  s10, endp
++
++	REG_S s10, SBI_TRAP_REGS_OFFSET(s10)(sp)
++	REG_L s10, SBI_TRAP_REGS_OFFSET(s10)(a0)
++	li s10, 0
+ 	call	sbi_init
++endp:
++	call to_be_stopped
+ 
+ 	/* We don't expect to reach here hence just hang */
+ 	j	_start_hang
+@@ -671,7 +678,7 @@ memcmp:
+ 	REG_S	s7, SBI_TRAP_REGS_OFFSET(s7)(sp)
+ 	REG_S	s8, SBI_TRAP_REGS_OFFSET(s8)(sp)
+ 	REG_S	s9, SBI_TRAP_REGS_OFFSET(s9)(sp)
+-	REG_S	s10, SBI_TRAP_REGS_OFFSET(s10)(sp)
++	//REG_S	s10, SBI_TRAP_REGS_OFFSET(s10)(sp)
+ 	REG_S	s11, SBI_TRAP_REGS_OFFSET(s11)(sp)
+ 	REG_S	t3, SBI_TRAP_REGS_OFFSET(t3)(sp)
+ 	REG_S	t4, SBI_TRAP_REGS_OFFSET(t4)(sp)
+@@ -710,7 +717,7 @@ memcmp:
+ 	REG_L	s7, SBI_TRAP_REGS_OFFSET(s7)(a0)
+ 	REG_L	s8, SBI_TRAP_REGS_OFFSET(s8)(a0)
+ 	REG_L	s9, SBI_TRAP_REGS_OFFSET(s9)(a0)
+-	REG_L	s10, SBI_TRAP_REGS_OFFSET(s10)(a0)
++	//REG_L	s10, SBI_TRAP_REGS_OFFSET(s10)(a0)
+ 	REG_L	s11, SBI_TRAP_REGS_OFFSET(s11)(a0)
+ 	REG_L	t3, SBI_TRAP_REGS_OFFSET(t3)(a0)
+ 	REG_L	t4, SBI_TRAP_REGS_OFFSET(t4)(a0)
+@@ -813,7 +820,7 @@ _reset_regs:
+ 	li s7, 0
+ 	li s8, 0
+ 	li s9, 0
+-	li s10, 0
++	//li s10, 0
+ 	li s11, 0
+ 	li t3, 0
+ 	li t4, 0
 diff --git firmware/fw_base.ldS firmware/fw_base.ldS
-index 0ac75f2..9aa9c1a 100644
+index 220c043..977bcd8 100644
 --- firmware/fw_base.ldS
 +++ firmware/fw_base.ldS
-@@ -79,3 +79,39 @@
+@@ -92,3 +92,39 @@
  	. = ALIGN(0x1000); /* Need this to create proper sections */
  
  	PROVIDE(_fw_end = .);
@@ -42,3 +88,265 @@ index 0ac75f2..9aa9c1a 100644
 +  /* 64 Bytes : security monitor's signature by device */
 +  PROVIDE( sanctum_sm_signature = . );
 +  . += 0x40;
+diff --git firmware/fw_base.ldS.orig firmware/fw_base.ldS.orig
+new file mode 100644
+index 0000000..220c043
+--- /dev/null
++++ firmware/fw_base.ldS.orig
+@@ -0,0 +1,94 @@
++/*
++ * SPDX-License-Identifier: BSD-2-Clause
++ *
++ * Copyright (c) 2019 Western Digital Corporation or its affiliates.
++ *
++ * Authors:
++ *   Anup Patel <anup.patel@wdc.com>
++ */
++
++	. = FW_TEXT_START;
++	/* Don't add any section between FW_TEXT_START and _fw_start */
++	PROVIDE(_fw_start = .);
++
++	. = ALIGN(0x1000); /* Need this to create proper sections */
++
++	/* Beginning of the code section */
++
++	.text :
++ 	{
++		PROVIDE(_text_start = .);
++		*(.entry)
++		*(.text)
++		. = ALIGN(8);
++		PROVIDE(_text_end = .);
++	}
++
++	. = ALIGN(0x1000); /* Ensure next section is page aligned */
++
++	/* End of the code sections */
++
++	/* Beginning of the read-only data sections */
++
++	. = ALIGN(0x1000); /* Ensure next section is page aligned */
++
++	.rodata :
++	{
++		PROVIDE(_rodata_start = .);
++		*(.rodata .rodata.*)
++		. = ALIGN(8);
++		PROVIDE(_rodata_end = .);
++	}
++
++	/* End of the read-only data sections */
++
++	/* Beginning of the read-write data sections */
++
++	. = ALIGN(0x1000); /* Ensure next section is page aligned */
++
++	.data :
++	{
++		PROVIDE(_data_start = .);
++
++		*(.sdata)
++		*(.sdata.*)
++		*(.data)
++		*(.data.*)
++		*(.readmostly.data)
++		*(*.data)
++		. = ALIGN(8);
++
++		PROVIDE(_data_end = .);
++	}
++
++	.dynsym : {
++		PROVIDE(__dyn_sym_start = .);
++		*(.dynsym)
++		PROVIDE(__dyn_sym_end = .);
++	}
++
++	.rela.dyn : {
++		PROVIDE(__rel_dyn_start = .);
++		*(.rela*)
++		. = ALIGN(8);
++		PROVIDE(__rel_dyn_end = .);
++	}
++
++	. = ALIGN(0x1000); /* Ensure next section is page aligned */
++
++	.bss :
++	{
++		PROVIDE(_bss_start = .);
++		*(.sbss)
++		*(.sbss.*)
++		*(.bss)
++		*(.bss.*)
++		. = ALIGN(8);
++		PROVIDE(_bss_end = .);
++	}
++
++	/* End of the read-write data sections */
++
++	. = ALIGN(0x1000); /* Need this to create proper sections */
++
++	PROVIDE(_fw_end = .);
+diff --git firmware/fw_dynamic.elf.ldS firmware/fw_dynamic.elf.ldS
+index d1e2ea8..1d98d2d 100644
+--- firmware/fw_dynamic.elf.ldS
++++ firmware/fw_dynamic.elf.ldS
+@@ -13,6 +13,7 @@ ENTRY(_start)
+ SECTIONS
+ {
+ 	#include "fw_base.ldS"
++	#include "sanctum_params_mod.lds"
+ 
+ 	PROVIDE(_fw_reloc_end = .);
+ }
+diff --git firmware/fw_jump.elf.ldS firmware/fw_jump.elf.ldS
+index d1e2ea8..5f7bd4e 100644
+--- firmware/fw_jump.elf.ldS
++++ firmware/fw_jump.elf.ldS
+@@ -13,6 +13,8 @@ ENTRY(_start)
+ SECTIONS
+ {
+ 	#include "fw_base.ldS"
++	#include "sanctum_params_mod.lds"
++
+ 
+ 	PROVIDE(_fw_reloc_end = .);
+ }
+diff --git firmware/fw_payload.elf.ldS firmware/fw_payload.elf.ldS
+index f1a544b..96898eb 100644
+--- firmware/fw_payload.elf.ldS
++++ firmware/fw_payload.elf.ldS
+@@ -13,7 +13,7 @@ ENTRY(_start)
+ SECTIONS
+ {
+ 	#include "fw_base.ldS"
+-
++	#include "sanctum_params_mod.lds"
+ #ifdef FW_PAYLOAD_OFFSET
+ 	. = FW_TEXT_START + FW_PAYLOAD_OFFSET;
+ #else
+diff --git firmware/sanctum_params_mod.lds firmware/sanctum_params_mod.lds
+new file mode 100644
+index 0000000..9ca79e1
+--- /dev/null
++++ firmware/sanctum_params_mod.lds
+@@ -0,0 +1,47 @@
++
++/* 64 Bytes : security monitor's signature by device */
++PROVIDE( sanctum_CDI = . );
++. += 0x40;
++
++/* 32 Bytes : security monitor's signature by device */
++PROVIDE( sanctum_ECASM_pk = . );
++. += 0x40;
++
++/* 64 Bytes : security monitor's signature by device */
++PROVIDE( test = . );
++. += 0x40;
++
++/* 64 Bytes : security monitor's signature by device */
++PROVIDE( sanctum_device_root_key_pub = . );
++. += 0x40;
++
++/* 512 Bytes : security monitor's signature by device */
++PROVIDE( sanctum_cert_sm = . );
++. += 0x200;
++
++/* 512 Bytes : security monitor's signature by device */
++PROVIDE( sanctum_cert_root = . );
++. += 0x200;
++
++/* 512 Bytes : security monitor's signature by device */
++PROVIDE( sanctum_cert_man = . );
++. += 0x200;
++
++/* 4 Byte : security monitor's signature by device */
++PROVIDE( sanctum_length_cert = . );
++. += 0x04;
++
++/* 4 Byte : security monitor's signature by device */
++PROVIDE( sanctum_length_cert_root = . );
++. += 0x04;
++
++/* 4 Byte : security monitor's signature by device */
++PROVIDE( sanctum_length_cert_man = . );
++. += 0x04;
++
++
++
++
++
++
++
+diff --git include/sbi/sbi_init.h include/sbi/sbi_init.h
+index 74eb1c0..d999c22 100644
+--- include/sbi/sbi_init.h
++++ include/sbi/sbi_init.h
+@@ -14,10 +14,12 @@
+ 
+ struct sbi_scratch;
+ 
+-void __noreturn sbi_init(struct sbi_scratch *scratch);
++void __noreturn sbi_init(struct sbi_scratch *scratch,bool flag);
+ 
+ unsigned long sbi_init_count(u32 hartid);
+ 
+ void __noreturn sbi_exit(struct sbi_scratch *scratch);
+ 
++void to_be_stopped(struct sbi_scratch *scratch);
++
+ #endif
+diff --git lib/sbi/sbi_init.c lib/sbi/sbi_init.c
+index d57efa7..b15157a 100644
+--- lib/sbi/sbi_init.c
++++ lib/sbi/sbi_init.c
+@@ -231,7 +231,7 @@ static void wake_coldboot_harts(struct sbi_scratch *scratch, u32 hartid)
+ 
+ static unsigned long init_count_offset;
+ 
+-static void __noreturn init_coldboot(struct sbi_scratch *scratch, u32 hartid)
++static void __noreturn init_coldboot(struct sbi_scratch *scratch, u32 hartid, bool flag)
+ {
+ 	int rc;
+ 	unsigned long *init_count;
+@@ -273,6 +273,10 @@ static void __noreturn init_coldboot(struct sbi_scratch *scratch, u32 hartid)
+ 
+ 	sbi_boot_print_banner(scratch);
+ 
++	if(flag == false){
++		sbi_panic("Error validating security monitor, STOP BOOTING");
++	}
++
+ 	rc = sbi_irqchip_init(scratch, TRUE);
+ 	if (rc) {
+ 		sbi_printf("%s: irqchip init failed (error %d)\n",
+@@ -457,7 +461,7 @@ static atomic_t coldboot_lottery = ATOMIC_INITIALIZER(0);
+  *
+  * @param scratch pointer to sbi_scratch of current HART
+  */
+-void __noreturn sbi_init(struct sbi_scratch *scratch)
++void __noreturn sbi_init(struct sbi_scratch *scratch, bool flag)
+ {
+ 	bool next_mode_supported	= FALSE;
+ 	bool coldboot			= FALSE;
+@@ -506,7 +510,7 @@ void __noreturn sbi_init(struct sbi_scratch *scratch)
+ 		sbi_hart_hang();
+ 
+ 	if (coldboot)
+-		init_coldboot(scratch, hartid);
++		init_coldboot(scratch, hartid, flag);
+ 	else
+ 		init_warmboot(scratch, hartid);
+ }
+@@ -559,3 +563,10 @@ void __noreturn sbi_exit(struct sbi_scratch *scratch)
+ 
+ 	sbi_hsm_exit(scratch);
+ }
++
++void to_be_stopped(struct sbi_scratch *scratch, bool flag){
++	sbi_init(scratch, 0);
++}
++
++
++

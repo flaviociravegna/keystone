@@ -230,7 +230,6 @@ int keystone_runtime_attestation(unsigned long data) {
   struct keystone_ioctl_runtime_attestation *arg = (struct keystone_ioctl_runtime_attestation*) data;
   struct enclave* enclave = get_enclave_by_id(arg->eid);
   struct report_t *report = kmalloc(sizeof(struct report_t), GFP_KERNEL);
-  struct report_t report_from_ioctl_params = arg->attestation_report;
 
   if (!report) {
     keystone_err("failed to allocate report struct\n");
@@ -261,6 +260,68 @@ error_no_free:
   return retval;
 }
 
+int keystone_get_cert_chain(unsigned long data) {
+  int retval = 0;
+  struct sbiret ret;
+  struct keystone_ioctl_cert_chain *arg = (struct keystone_ioctl_cert_chain*) data;
+  struct enclave* enclave = get_enclave_by_id(arg->eid);
+  unsigned char *cert_sm, *cert_root, *cert_man;
+  int *lengths;
+
+  if (!(cert_sm = kmalloc(sizeof(unsigned char) * MAX_CERT_LEN, GFP_KERNEL))) {
+    keystone_err("failed to allocate certificate var\n");
+    retval = -ENOMEM;
+    goto error_no_free;
+  }
+
+  if (!(cert_root = kmalloc(sizeof(unsigned char) * MAX_CERT_LEN, GFP_KERNEL))) {
+    keystone_err("failed to allocate certificate var\n");
+    retval = -ENOMEM;
+    goto error_root;
+  }
+
+  if (!(cert_man = kmalloc(sizeof(unsigned char) * MAX_CERT_LEN, GFP_KERNEL))) {
+    keystone_err("failed to allocate certificate var\n");
+    retval = -ENOMEM;
+    goto error_man;
+  }
+
+  if (!(lengths = kmalloc(sizeof(int) * 3, GFP_KERNEL))) {
+    keystone_err("failed to allocate length array\n");
+    retval = -ENOMEM;
+    goto error_lengths;
+  }
+
+  if (!enclave) {
+    keystone_err("invalid enclave id\n");
+    retval = -EINVAL;
+    goto error_enc;
+  }
+
+  if (enclave->eid < 0) {
+    keystone_err("real enclave does not exist\n");
+    retval = -EINVAL;
+    goto error_enc;
+  }
+
+  ret = sbi_sm_get_cert_chain(cert_sm, cert_root, cert_man, lengths);
+  memcpy(arg->cert_sm, cert_sm, lengths[0] * sizeof(unsigned char));
+  memcpy(arg->cert_root, cert_root, lengths[1] * sizeof(unsigned char));
+  memcpy(arg->cert_man, cert_man, lengths[2] * sizeof(unsigned char));
+  memcpy(arg->lengths, lengths, 3 * sizeof(int));
+
+error_enc:
+  kfree(lengths);
+error_lengths:
+  kfree(cert_man);
+error_man:
+  kfree(cert_root);
+error_root:
+  kfree(cert_sm);
+error_no_free:
+  return retval;
+}
+
 /*********************************************/
 /*********************************************/
 /*********************************************/
@@ -268,7 +329,7 @@ error_no_free:
 long keystone_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
 {
   long ret;
-  char data[2048];
+  char data[4096];
 
   size_t ioc_size;
 
@@ -299,6 +360,9 @@ long keystone_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
       break;
     case KEYSTONE_IOC_RUNTIME_ATTESTATION:
       ret = keystone_runtime_attestation((unsigned long) data);
+      break;
+    case KEYSTONE_IOC_GET_CHERT_CHAIN_AND_LAK:
+      ret = keystone_get_cert_chain((unsigned long) data);
       break;
     /* Note that following commands could have been implemented as a part of ADD_PAGE ioctl.
      * However, there was a weird bug in compiler that generates a wrong control flow

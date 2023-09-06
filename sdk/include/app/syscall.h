@@ -14,6 +14,10 @@
 #define SYSCALL_SHAREDCOPY 1002
 #define SYSCALL_ATTEST_ENCLAVE 1003
 #define SYSCALL_GET_SEALING_KEY 1004
+#define SYSCALL_CREATE_KEYPAIR 1005
+#define SYSCALL_GET_CHAIN 1006
+#define SYSCALL_CRYPTO_INTERFACE 1007
+#define SYSCALL_PRINT_STRING 1008
 #define SYSCALL_VERIFY_INTEGRITY_RT_EAPP 1100
 #define SYSCALL_EXIT 1101
 
@@ -28,6 +32,22 @@
     asm volatile("ecall"                                       \
                  : "+r"(a0)                                    \
                  : "r"(a1), "r"(a2), "r"(a3), "r"(a4), "r"(a7) \
+                 : "memory");                                  \
+    a0;                                                        \
+  })
+
+#define CUSTOM_SYSCALL(which, arg0, arg1, arg2, arg3, arg4, arg5)           \
+  ({                                                           \
+    register uintptr_t a0 asm("a0") = (uintptr_t)(arg0);       \
+    register uintptr_t a1 asm("a1") = (uintptr_t)(arg1);       \
+    register uintptr_t a2 asm("a2") = (uintptr_t)(arg2);       \
+    register uintptr_t a3 asm("a3") = (uintptr_t)(arg3);       \
+    register uintptr_t a4 asm("a4") = (uintptr_t)(arg4);       \
+    register uintptr_t a5 asm("a5") = (uintptr_t)(arg5);       \
+    register uintptr_t a7 asm("a7") = (uintptr_t)(which);      \
+    asm volatile("ecall"                                       \
+                 : "+r"(a0)                                    \
+                 : "r"(a1), "r"(a2), "r"(a3), "r"(a4), "r"(a5), "r"(a7) \
                  : "memory");                                  \
     a0;                                                        \
   })
@@ -60,5 +80,17 @@ get_sealing_key(
     void* key_ident, size_t key_ident_size);
 
 int verify_integrity_rt_eapp();
+
+int
+create_keypair(void* pk, unsigned long index);
+
+int
+get_cert_chain(void* cert_1, void* cert_2, void* cert_3, void* size_1, void* size_2, void* size_3);
+
+int
+crypto_interface(unsigned long flag, void* data, size_t data_len, void* out_buf, size_t* out_buf_len, void* pk);
+
+int 
+rt_print_string(void* string, size_t length);
 
 #endif /* syscall.h */

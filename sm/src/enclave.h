@@ -13,6 +13,7 @@
 #include "pmp.h"
 #include "thread.h"
 #include "crypto.h"
+#include "x509custom.h"
 
 // Special target platform header, set by configure script
 #include TARGET_PLATFORM_HEADER
@@ -79,6 +80,25 @@ struct enclave
   byte hash_rt_eapp_initial[MDSIZE];
   byte sign[SIGNATURE_SIZE];
 
+  byte CDI[64];
+  byte local_att_pub[32];
+  byte local_att_priv[64];
+  mbedtls_x509write_cert crt_local_att;
+  unsigned char* crt_local_att_der[512];
+  int crt_local_att_der_length;
+
+  byte pk_ldev[32];
+  byte sk_ldev[64];
+
+  byte sk_array[10][64];
+  byte pk_array[10][32];
+  int n_keypair;
+
+  /*
+  mbedtls_x509_crt SM_attes_key;
+  byte dev_root_key_pub[32];
+  */
+
   /* parameters */
   struct runtime_va_params_t params;
   struct runtime_pa_params pa_params;
@@ -139,11 +159,21 @@ uintptr_t get_enclave_region_base(enclave_id eid, int memid);
 uintptr_t get_enclave_region_size(enclave_id eid, int memid);
 unsigned long get_sealing_key(uintptr_t seal_key, uintptr_t key_ident, size_t key_ident_size, enclave_id eid);
 
+unsigned long create_keypair(enclave_id, unsigned char* pk ,int seed_enc);
+unsigned long get_cert_chain(enclave_id eid, unsigned char** certs, int* sizes);
+unsigned long do_crypto_op(enclave_id eid, int flag, unsigned char* data, int data_len, unsigned char* out_data, int* len_out_data, unsigned char* pk);
+
 /************ verification of the enclave at runtime ************/
 unsigned long copy_enclave_report_runtime_attestation_into_sm(uintptr_t src, struct report* dest);
 unsigned long copy_enclave_report_runtime_attestation_from_sm(struct report* src, uintptr_t dest);
 unsigned long verify_integrity_rt_eapp(int eid);
 unsigned long attest_integrity_at_runtime(struct report *report, uintptr_t data, uintptr_t size, enclave_id eid);
 void compute_eapp_hash(struct enclave *enclave, int at_runtime);
+
+/************* certificates *************/
+unsigned long copy_cert_from_sm(unsigned char *src_cert, uintptr_t dest_cert, int size);
+unsigned long copy_cert_lengths_from_sm(int *src_lengths_array, uintptr_t dest_lengths_array, int size);
+void get_cert(unsigned char* dest_cert_buffer, int *dest_size, int cert_num);
+
 
 #endif

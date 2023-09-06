@@ -26,6 +26,8 @@
   _IOR(KEYSTONE_IOC_MAGIC, 0x07, struct keystone_ioctl_create_enclave)
 #define KEYSTONE_IOC_RUNTIME_ATTESTATION \
   _IOR(KEYSTONE_IOC_MAGIC, 0x08, struct keystone_ioctl_runtime_attestation)
+#define KEYSTONE_IOC_GET_CHERT_CHAIN_AND_LAK \
+  _IOR(KEYSTONE_IOC_MAGIC, 0x09, struct keystone_ioctl_cert_chain)
 
 #define RT_NOEXEC 0
 #define USER_NOEXEC 1
@@ -85,6 +87,14 @@ struct keystone_ioctl_runtime_attestation {
   unsigned long nonce;
   unsigned long size;
   struct report_t attestation_report;
+};
+
+struct keystone_ioctl_cert_chain {
+  uintptr_t eid;
+  unsigned char cert_sm[512];
+  unsigned char cert_root[512];
+  unsigned char cert_man[512];
+  int lengths[3];
 };
 
 #endif

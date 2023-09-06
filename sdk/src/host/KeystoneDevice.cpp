@@ -17,8 +17,6 @@ KeystoneDevice::runtime_attestation(report_t *report) {
   params.eid = eid;
   params.size = sizeof(unsigned long);
   params.nonce = random();
-  
-  //printf("[HOST] Nonce generated at host: %lu", params.nonce);
 
   if (ioctl(fd, KEYSTONE_IOC_RUNTIME_ATTESTATION, &params)) {
     perror("ioctl error");
@@ -27,12 +25,25 @@ KeystoneDevice::runtime_attestation(report_t *report) {
   }
   
   memcpy(report, &(params.attestation_report), sizeof(params.attestation_report));
-  /*printf("\n[HOST] enclave hash copied into report: 0x");
-  int count;
-  for (count = 0; count < sizeof(report->enclave.hash) / sizeof(*report->enclave.hash); count++)
-    printf("%02x", report->enclave.hash[count]);
-  printf("\n");*/
 
+  return Error::Success;
+}
+
+Error
+KeystoneDevice::get_cert_chain_and_lak(unsigned char *cert_sm, unsigned char *cert_root, unsigned char *cert_man, int *lengths) {
+  struct keystone_ioctl_cert_chain params;
+  params.eid = eid;
+
+  if (ioctl(fd, KEYSTONE_IOC_GET_CHERT_CHAIN_AND_LAK, &params)) {
+    perror("ioctl error");
+    eid = -1;
+    return Error::IoctlErrorGetCertChain;
+  }
+
+  memcpy(cert_sm, params.cert_sm, params.lengths[0]);
+  memcpy(cert_root, params.cert_root, params.lengths[1]);
+  memcpy(cert_man, params.cert_man, params.lengths[2]);
+  memcpy(lengths, params.lengths, 3 * sizeof(int));
 
   return Error::Success;
 }

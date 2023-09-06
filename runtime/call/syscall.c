@@ -14,6 +14,8 @@
 
 #include "call/syscall_nums.h"
 
+#define PUBLIC_KEY_SIZE 32
+
 #ifdef USE_IO_SYSCALL
 #include "call/io_wrap.h"
 #endif /* USE_IO_SYSCALL */
@@ -155,10 +157,11 @@ void handle_syscall(struct encl_ctx* ctx)
   uintptr_t arg2 = ctx->regs.a2;
   uintptr_t arg3 = ctx->regs.a3;
   uintptr_t arg4 = ctx->regs.a4;
+  uintptr_t arg5 = ctx->regs.a5;
 
   // We only use arg5 in these for now, keep warnings happy.
 #if defined(USE_LINUX_SYSCALL) || defined(USE_IO_SYSCALL)
-  uintptr_t arg5 = ctx->regs.a5;
+  //uintptr_t arg5 = ctx->regs.a5;
 #endif /* IO_SYSCALL */
   uintptr_t ret = 0;
 
@@ -214,6 +217,68 @@ void handle_syscall(struct encl_ctx* ctx)
 
     break;
 
+  case(RUNTIME_SYSCALL_CREATE_KEYPAIR):
+    buffer_1_pa = kernel_va_to_pa(rt_copy_buffer_1);
+
+    ret = sbi_create_keypair(buffer_1_pa, arg1);
+    if (!ret) {
+      copy_to_user((void*)arg0, (void*)rt_copy_buffer_1, PUBLIC_KEY_SIZE);
+    }
+
+    memset(rt_copy_buffer_1, 0x00, sizeof(rt_copy_buffer_1));
+    break;
+
+  case(RUNTIME_SYSCALL_GET_CHAIN):
+    tmp_copy_buf_vec[0] = kernel_va_to_pa(rt_copy_buffer_1);
+    tmp_copy_buf_vec[1] = kernel_va_to_pa(rt_copy_buffer_2);
+    tmp_copy_buf_vec[2] = kernel_va_to_pa(rt_copy_buffer_3);
+
+    ret = sbi_get_cert_chain(kernel_va_to_pa(tmp_copy_buf_vec), kernel_va_to_pa(sizes));
+    //printf("RT - OK - 1\r\n");
+    if (!ret) {
+      //printf("RT - OK - %d\r\n", sizes[0]);
+      copy_to_user((void*)arg0, (void*)rt_copy_buffer_1, sizes[0]);
+      //printf("RT - OK - %d\r\n", sizes[1]);
+      copy_to_user((void*)arg1, (void*)rt_copy_buffer_2, sizes[1]);
+      //printf("RT - OK - %d\r\n", sizes[2]);
+      copy_to_user((void*)arg2, (void*)rt_copy_buffer_3, sizes[2]);
+      //printf("RT - OK - 5\r\n");
+      copy_to_user((void*)arg3, (void*)&sizes[0], sizeof(unsigned long));
+      //printf("RT - OK - 6\r\n");
+      copy_to_user((void*)arg4, (void*)&sizes[1], sizeof(unsigned long));
+      //printf("RT - OK - 7\r\n");
+      copy_to_user((void*)arg5, (void*)&sizes[2], sizeof(unsigned long));
+    }
+    //printf("RT - OK - 8\r\n");
+    memset(rt_copy_buffer_1, 0x00, sizeof(rt_copy_buffer_1));
+    memset(rt_copy_buffer_2, 0x00, sizeof(rt_copy_buffer_2));
+    memset(rt_copy_buffer_3, 0x00, sizeof(rt_copy_buffer_3));
+    memset(tmp_copy_buf_vec, 0x00, sizeof(tmp_copy_buf_vec));
+    memset(sizes, 0x00, sizeof(sizes));
+    break;
+
+  case(RUNTIME_SYSCALL_CRYPTO_INTERFACE):
+    copy_from_user(rt_copy_buffer_1, (void*) arg1, arg2);
+    copy_from_user(rt_copy_buffer_3, (void*) arg5, PUBLIC_KEY_SIZE);
+
+    ret = sbi_crypto_interface(arg0, kernel_va_to_pa(rt_copy_buffer_1), arg2, kernel_va_to_pa(rt_copy_buffer_2),
+     kernel_va_to_pa(sizes), kernel_va_to_pa(rt_copy_buffer_3));
+    if (!ret) {
+      copy_to_user((void*)arg3, (void*)rt_copy_buffer_2, sizes[0]);
+      copy_to_user((void*)arg4, (void*)sizes, sizeof(unsigned long));
+    }
+
+    memset(rt_copy_buffer_1, 0x00, sizeof(rt_copy_buffer_1));
+    memset(rt_copy_buffer_2, 0x00, sizeof(rt_copy_buffer_2));
+    memset(rt_copy_buffer_3, 0x00, sizeof(rt_copy_buffer_3));
+    memset(sizes, 0x00, sizeof(sizes));
+    break;
+
+  case(RUNTIME_SYSCALL_PRINT_STRING):
+    copy_from_user((void*)rt_copy_buffer_1, (void*)arg0, arg1);
+    printf((char *)rt_copy_buffer_1);
+    ret = 0;
+    break;
 
 #ifdef USE_LINUX_SYSCALL
   case(SYS_clock_gettime):

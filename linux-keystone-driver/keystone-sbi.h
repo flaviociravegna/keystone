@@ -14,6 +14,7 @@
 #define SBI_SM_RUN_ENCLAVE      2003
 #define SBI_SM_RESUME_ENCLAVE   2005
 #define SBI_SM_RUNTIME_ATTESTATION 2006
+#define SBI_SM_GET_CERT_CHAIN   2007
 
 
 struct keystone_sbi_pregion_t
@@ -46,6 +47,12 @@ struct sbiret sbi_sm_runtime_attestation_enclave(
   struct report_t *report,
   unsigned long nonce,
   unsigned long size
+);
+struct sbiret sbi_sm_get_cert_chain(
+  unsigned char *cert_sm,
+  unsigned char *cert_root,
+  unsigned char *cert_man,
+  int *lengths
 );
 
 #endif
