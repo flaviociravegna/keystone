@@ -138,7 +138,7 @@ unsigned long sbi_do_crypto_op(int flag, unsigned char* data, int data_len, unsi
   return ret;
 }
 
-unsigned long sbi_sm_get_cert_chain_and_lak(unsigned char *cert_sm, unsigned char *cert_root, unsigned char *cert_man, int *lengths) {
+unsigned long sbi_sm_get_cert_chain_and_lak(uintptr_t cert_sm, uintptr_t cert_root, uintptr_t cert_man, int *lengths) {
   unsigned long ret;
   //unsigned char certs[3][512];    // 512 should be enough for each certificate
   int sizes[3];
@@ -147,26 +147,25 @@ unsigned long sbi_sm_get_cert_chain_and_lak(unsigned char *cert_sm, unsigned cha
   unsigned char temp_cert_root[512];
   unsigned char temp_cert_man[512];
 
-  //ret = get_cert_chain(cpu_get_enclave_id(), (unsigned char **) certs, sizes);
   get_cert(temp_cert_sm, &(sizes[0]), 0);
   //sbi_printf("[SM] Copied SM cert\n");
   get_cert(temp_cert_root, &(sizes[1]), 1);
   //sbi_printf("[SM] Copied ROOT cert\n");
   get_cert(temp_cert_man, &(sizes[2]), 2);
   //sbi_printf("[SM] Copied ROOT cert\n");
-  ret = copy_cert_from_sm(temp_cert_sm, (uintptr_t) cert_sm, sizes[0] * sizeof(unsigned char));
+  ret = copy_cert_from_sm(temp_cert_sm, cert_sm, sizes[0]);
   if (ret) {
     sbi_printf("[SM] Error while copying sm certificate from SM\n");
     return SBI_ERR_SM_ENCLAVE_ILLEGAL_ARGUMENT;
   }
 
-  ret = copy_cert_from_sm(temp_cert_root, (uintptr_t) cert_root, sizes[1] * sizeof(unsigned char));
+  ret = copy_cert_from_sm(temp_cert_root, cert_root, sizes[1]);
   if (ret) {
     sbi_printf("[SM] Error while copying root certificate from SM\n");
     return SBI_ERR_SM_ENCLAVE_ILLEGAL_ARGUMENT;
   }
 
-  ret = copy_cert_from_sm(temp_cert_man, (uintptr_t) cert_root, sizes[2] * sizeof(unsigned char));
+  ret = copy_cert_from_sm(temp_cert_man, cert_man, 512);//sizes[2]);
   if (ret) {
     sbi_printf("[SM] Error while copying man certificate from SM\n");
     return SBI_ERR_SM_ENCLAVE_ILLEGAL_ARGUMENT;
@@ -177,6 +176,12 @@ unsigned long sbi_sm_get_cert_chain_and_lak(unsigned char *cert_sm, unsigned cha
     sbi_printf("[SM] Error while copying the lengths array from SM\n");
     return SBI_ERR_SM_ENCLAVE_ILLEGAL_ARGUMENT;
   }
+
+  sbi_printf("[SM] SM cert: ");
+  for (int i = 0; i < sizes[0]; i++) {
+    sbi_printf("%02X,", temp_cert_sm[i]);
+  }
+  sbi_printf("\n");
 
   return ret;
 }
