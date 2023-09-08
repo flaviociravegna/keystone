@@ -94,6 +94,7 @@ struct keystone_ioctl_cert_chain {
   unsigned char cert_sm[512];
   unsigned char cert_root[512];
   unsigned char cert_man[512];
+  unsigned char cert_lak[512];
   int lengths[3];
 };
 

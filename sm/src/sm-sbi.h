@@ -51,7 +51,7 @@ unsigned long
 sbi_do_crypto_op(int flag, unsigned char* data, int data_len, unsigned char *out_buf, int* out_buf_len, uintptr_t pk);
 
 unsigned long
-sbi_sm_get_cert_chain_and_lak(uintptr_t cert_sm, uintptr_t cert_root, uintptr_t cert_man, int *lengths);
+sbi_sm_get_cert_chain_and_lak(uintptr_t cert_sm, uintptr_t cert_root, uintptr_t cert_man, uintptr_t cert_lak, int *lengths, unsigned int eid);
 
 unsigned long
 sbi_sm_verify_integrity_rt_eapp();

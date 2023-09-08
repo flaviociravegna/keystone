@@ -524,8 +524,8 @@ Enclave::requestRuntimeAttestation() {
 }
 
 void
-Enclave::requestCertChain(unsigned char *cert_sm, unsigned char *cert_root, unsigned char *cert_man, int *lengths) {
-  Error retval = pDevice->get_cert_chain_and_lak(cert_sm, cert_root, cert_man, lengths);
+Enclave::requestCertChain(unsigned char *cert_sm, unsigned char *cert_root, unsigned char *cert_man, unsigned char *cert_lak, int *lengths) {
+  Error retval = pDevice->get_cert_chain_and_lak(cert_sm, cert_root, cert_man, cert_lak, lengths);
 }
 
 Error

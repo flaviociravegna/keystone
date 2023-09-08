@@ -37,13 +37,16 @@ struct sbiret sbi_sm_get_cert_chain(
   unsigned char *cert_sm,
   unsigned char *cert_root,
   unsigned char *cert_man,
-  int *lengths) {
+  unsigned char *cert_lak,
+  int *lengths,
+  unsigned long eid) {
     return sbi_ecall(
       KEYSTONE_SBI_EXT_ID,
       SBI_SM_GET_CERT_CHAIN,
       (unsigned long) cert_sm,
       (unsigned long) cert_root,
       (unsigned long) cert_man,
+      (unsigned long) cert_lak,
       (unsigned long) lengths,
-      0, 0);
+      eid);
 }

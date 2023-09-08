@@ -52,7 +52,9 @@ struct sbiret sbi_sm_get_cert_chain(
   unsigned char *cert_sm,
   unsigned char *cert_root,
   unsigned char *cert_man,
-  int *lengths
+  unsigned char *cert_lak,
+  int *lengths,
+  unsigned long eid
 );
 
 #endif

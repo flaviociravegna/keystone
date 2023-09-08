@@ -5,5 +5,6 @@ struct keystone_ioctl_cert_chain {
     unsigned char cert_sm[MAX_CERT_LEN];
     unsigned char cert_root[MAX_CERT_LEN];
     unsigned char cert_man[MAX_CERT_LEN];
+    unsigned char cert_lak[MAX_CERT_LEN];
     int lengths[3];
 };

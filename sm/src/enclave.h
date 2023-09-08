@@ -173,7 +173,7 @@ void compute_eapp_hash(struct enclave *enclave, int at_runtime);
 /************* certificates *************/
 unsigned long copy_cert_from_sm(unsigned char *src_cert, uintptr_t dest_cert, int size);
 unsigned long copy_cert_lengths_from_sm(int *src_lengths_array, uintptr_t dest_lengths_array, int size);
-void get_cert(unsigned char* dest_cert_buffer, int *dest_size, int cert_num);
+void get_cert(enclave_id eid, unsigned char* dest_cert_buffer, int *dest_size, int cert_num);
 
 
 #endif

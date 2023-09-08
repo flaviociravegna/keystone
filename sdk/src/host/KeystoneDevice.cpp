@@ -30,7 +30,7 @@ KeystoneDevice::runtime_attestation(report_t *report) {
 }
 
 Error
-KeystoneDevice::get_cert_chain_and_lak(unsigned char *cert_sm, unsigned char *cert_root, unsigned char *cert_man, int *lengths) {
+KeystoneDevice::get_cert_chain_and_lak(unsigned char *cert_sm, unsigned char *cert_root, unsigned char *cert_man, unsigned char *cert_lak, int *lengths) {
   struct keystone_ioctl_cert_chain params;
   params.eid = eid;
 
@@ -43,7 +43,8 @@ KeystoneDevice::get_cert_chain_and_lak(unsigned char *cert_sm, unsigned char *ce
   memcpy(cert_sm, params.cert_sm, params.lengths[0]);
   memcpy(cert_root, params.cert_root, params.lengths[1]);
   memcpy(cert_man, params.cert_man, params.lengths[2]);
-  memcpy(lengths, params.lengths, 3 * sizeof(int));
+  memcpy(cert_lak, params.cert_lak, params.lengths[3]);
+  memcpy(lengths, params.lengths, 4 * sizeof(int));
 
   return Error::Success;
 }

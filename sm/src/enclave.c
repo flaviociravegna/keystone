@@ -1062,22 +1062,26 @@ unsigned long create_keypair(enclave_id eid, unsigned char* pk, int seed_enc){
   return 0;
 }
 
-void get_cert(unsigned char* dest_cert_buffer, int *dest_size, int cert_num) {
-  if (cert_num >= 3)
-    sbi_printf("Invalid ID %d (0: SM, 1: root, 2: man)", cert_num);
+void get_cert(enclave_id eid, unsigned char* dest_cert_buffer, int *dest_size, int cert_num) {
+  if (cert_num > 3)
+    sbi_printf("Invalid ID %d (0: man, 1: root, 2: SM, 3: lak)", cert_num);
 
   switch (cert_num) {
     case 0:
-      my_memcpy(dest_cert_buffer, cert_sm, length_cert);
-      *dest_size = length_cert;
+      my_memcpy(dest_cert_buffer, cert_man, length_cert_man);
+      *dest_size = length_cert_man;
       break;
     case 1:
       my_memcpy(dest_cert_buffer, cert_root, length_cert_root);
       *dest_size = length_cert_root;
       break;
     case 2:
-      my_memcpy(dest_cert_buffer, cert_man, length_cert_man);
-      *dest_size = length_cert_man;
+      my_memcpy(dest_cert_buffer, cert_sm, length_cert);
+      *dest_size = length_cert;
+      break;
+    case 3:
+      my_memcpy(dest_cert_buffer, enclaves[eid].crt_local_att_der, enclaves[eid].crt_local_att_der_length);
+      *dest_size = enclaves[eid].crt_local_att_der_length;
       break;
     default:
       break;

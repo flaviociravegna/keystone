@@ -62,10 +62,6 @@ class Enclave {
   bool prepareEnclave(uintptr_t alternatePhysAddr);
   bool initMemory();
 
-  /*std::mutex mtx;
-  std::condition_variable cv;
-  bool is_runtime_attestation_requested;*/
-
  public:
   Enclave();
   ~Enclave();
@@ -82,7 +78,7 @@ class Enclave {
   Error run(uintptr_t* ret = nullptr);
   Error run_with_runtime_attestation_support(uintptr_t* retval);
   void requestRuntimeAttestation();
-  void requestCertChain(unsigned char *cert_sm, unsigned char *cert_root, unsigned char *cert_man, int *lengths);
+  void requestCertChain(unsigned char *cert_sm, unsigned char *cert_root, unsigned char *cert_man, unsigned char *cert_lak, int *lengths);
 };
 
 uint64_t

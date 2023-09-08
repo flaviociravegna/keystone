@@ -265,7 +265,7 @@ int keystone_get_cert_chain(unsigned long data) {
   struct sbiret ret;
   struct keystone_ioctl_cert_chain *arg = (struct keystone_ioctl_cert_chain*) data;
   struct enclave* enclave = get_enclave_by_id(arg->eid);
-  unsigned char *cert_sm, *cert_root, *cert_man;
+  unsigned char *cert_sm, *cert_root, *cert_man, *cert_lak;
   int *lengths;
 
   if (!(cert_sm = kmalloc(sizeof(unsigned char) * MAX_CERT_LEN, GFP_KERNEL))) {
@@ -286,7 +286,13 @@ int keystone_get_cert_chain(unsigned long data) {
     goto error_man;
   }
 
-  if (!(lengths = kmalloc(sizeof(int) * 3, GFP_KERNEL))) {
+  if (!(cert_lak = kmalloc(sizeof(unsigned char) * MAX_CERT_LEN, GFP_KERNEL))) {
+    keystone_err("failed to allocate certificate var\n");
+    retval = -ENOMEM;
+    goto error_lak;
+  }
+
+  if (!(lengths = kmalloc(sizeof(int) * 4, GFP_KERNEL))) {
     keystone_err("failed to allocate length array\n");
     retval = -ENOMEM;
     goto error_lengths;
@@ -304,15 +310,18 @@ int keystone_get_cert_chain(unsigned long data) {
     goto error_enc;
   }
 
-  ret = sbi_sm_get_cert_chain(cert_sm, cert_root, cert_man, lengths);
+  ret = sbi_sm_get_cert_chain(cert_sm, cert_root, cert_man, cert_lak, lengths, enclave->eid);
   memcpy(arg->cert_sm, cert_sm, lengths[0] * sizeof(unsigned char));
   memcpy(arg->cert_root, cert_root, lengths[1] * sizeof(unsigned char));
   memcpy(arg->cert_man, cert_man, lengths[2] * sizeof(unsigned char));
-  memcpy(arg->lengths, lengths, 3 * sizeof(int));
+  memcpy(arg->cert_lak, cert_lak, lengths[3] * sizeof(unsigned char));
+  memcpy(arg->lengths, lengths, 4 * sizeof(int));
 
 error_enc:
   kfree(lengths);
 error_lengths:
+  kfree(cert_lak);
+error_lak:
   kfree(cert_man);
 error_man:
   kfree(cert_root);
