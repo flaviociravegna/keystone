@@ -173,3 +173,39 @@ size_t
 Report::getDataSize() {
   return report.enclave.data_len;
 }
+
+/************* Runtime Attestation Section *************/
+void fromBytesRuntime(byte* bin) {
+  std::memcpy(&runtime_report, bin, sizeof(struct runtime_report_t));
+}
+
+int verify(
+    const byte* expected_enclave_hash,
+    const byte* expected_sm_hash,
+    const byte* dev_public_key) {
+
+}
+int checkSignaturesOnlyRuntime(const byte* dev_public_key, const byte* lak) {
+  int sm_valid      = 0;
+  int enclave_valid = 0;
+
+  /* verify SM report */
+  sm_valid = ed25519_verify(
+      runtime_report.sm.signature, reinterpret_cast<byte*>(&report.sm),
+      MDSIZE + PUBLIC_KEY_SIZE, dev_public_key);
+
+  /* verify Enclave runtime report */
+  enclave_valid = ed25519_verify(
+      runtime_report.enclave.signature, reinterpret_cast<byte*>(&runtime_report.enclave),
+      MDSIZE + sizeof(uint64_t) + runtime_report.enclave.data_len,
+      runtime_report.sm.public_key);
+
+  return sm_valid && enclave_valid;
+}
+
+void* getNonceRuntime() {
+  return runtime_report.enclave.nonce;
+}
+byte* getEnclaveRuntimeHash() {
+  return runtime_report.enclave.hash;
+}

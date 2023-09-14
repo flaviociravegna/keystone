@@ -380,15 +380,22 @@ static unsigned long copy_enclave_report(struct enclave* enclave,
     return SBI_ERR_SM_ENCLAVE_SUCCESS;
 }
 
-unsigned long copy_enclave_report_runtime_attestation_into_sm(uintptr_t src, struct report* dest) {
-  if (copy_to_sm(dest, src, sizeof(struct report)))
+unsigned long copy_enclave_report_runtime_attestation_into_sm(uintptr_t src, struct runtime_report* dest) {
+  if (copy_to_sm(dest, src, sizeof(struct runtime_report)))
     return SBI_ERR_SM_ENCLAVE_ILLEGAL_ARGUMENT;
   else
     return SBI_ERR_SM_ENCLAVE_SUCCESS;
 }
 
-unsigned long copy_enclave_report_runtime_attestation_from_sm(struct report* src, uintptr_t dest) {
-  if (copy_from_sm(dest, src, sizeof(struct report)))
+unsigned long copy_enclave_report_runtime_attestation_from_sm(struct runtime_report* src, uintptr_t dest) {
+  if (copy_from_sm(dest, src, sizeof(struct runtime_report)))
+    return SBI_ERR_SM_ENCLAVE_ILLEGAL_ARGUMENT;
+  else
+    return SBI_ERR_SM_ENCLAVE_SUCCESS;
+}
+
+unsigned long copy_nonce_into_sm(uintptr_t src, unsigned char* dest) {
+  if (copy_to_sm(dest, src, 32 * sizeof(unsigned char)))
     return SBI_ERR_SM_ENCLAVE_ILLEGAL_ARGUMENT;
   else
     return SBI_ERR_SM_ENCLAVE_SUCCESS;
@@ -1064,7 +1071,7 @@ unsigned long create_keypair(enclave_id eid, unsigned char* pk, int seed_enc){
 
 void get_cert(enclave_id eid, unsigned char* dest_cert_buffer, int *dest_size, int cert_num) {
   if (cert_num > 3)
-    sbi_printf("Invalid ID %d (0: man, 1: root, 2: SM, 3: lak)", cert_num);
+    sbi_printf("[SM] Invalid ID %d (0: man, 1: root, 2: SM, 3: lak)", cert_num);
 
   switch (cert_num) {
     case 0:
@@ -1244,25 +1251,16 @@ unsigned long do_crypto_op(enclave_id eid, int flag, unsigned char* data, int da
 }
 
 unsigned long attest_integrity_at_runtime(
-    struct report *report,
-    uintptr_t data,
-    uintptr_t size,
+    struct runtime_report *report,
+    unsigned char *nonce,
     enclave_id eid) {
   int ret = 0;
-
-  if (size > ATTEST_DATA_MAXLEN)
-    return SBI_ERR_SM_ENCLAVE_ILLEGAL_ARGUMENT;
-
   spin_lock(&encl_lock);
 
   if(!(ENCLAVE_EXISTS(eid) && (enclaves[eid].state == STOPPED || enclaves[eid].state == RUNNING))) {
     ret = SBI_ERR_SM_ENCLAVE_NOT_EXECUTION_TIME;
     goto err_unlock;
   }
-
-  /* copy data to be signed */
-  // TODO
-  report->enclave.data_len = size;
 
   /* compute hash of the read only enclave pages
      and save it in the associated enclave struct */
@@ -1273,7 +1271,9 @@ unsigned long attest_integrity_at_runtime(
   sbi_memcpy(report->sm.public_key, sm_public_key, PUBLIC_KEY_SIZE);
   sbi_memcpy(report->sm.signature, sm_signature, SIGNATURE_SIZE);
   sbi_memcpy(report->enclave.hash, enclaves[eid].hash_rt_eapp_actual, MDSIZE);
-  sm_sign(report->enclave.signature, &report->enclave, sizeof(struct enclave_report) - SIGNATURE_SIZE - ATTEST_DATA_MAXLEN + size);
+  sbi_memcpy(report->enclave.nonce, (byte *) nonce, NONCE_LEN);
+  ed25519_sign(report->enclave.signature, report->enclave.hash, MDSIZE, enclaves[eid].local_att_pub, enclaves[eid].local_att_priv);
+  //sm_sign(report->enclave.signature, report->enclave.hash, MDSIZE);
 
   if (ret) {
     ret = SBI_ERR_SM_ENCLAVE_ILLEGAL_ARGUMENT;

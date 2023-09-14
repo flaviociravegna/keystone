@@ -18,7 +18,7 @@ namespace Keystone {
 Enclave::Enclave() {
   runtimeFile = NULL;
   enclaveFile = NULL;
-  runtime_attestation_report = (report_t *) malloc(sizeof(report_t));
+  runtime_attestation_report = (runtime_report_t *) malloc(sizeof(runtime_report_t));
 }
 
 Enclave::~Enclave() {
@@ -513,14 +513,14 @@ Enclave::getSharedBufferSize() {
   return shared_buffer_size;
 }
 
-report_t*
+runtime_report_t*
 Enclave::getRuntimeAttestationReport() {
   return runtime_attestation_report;
 }
 
 void
-Enclave::requestRuntimeAttestation() {
-  Error retval = pDevice->runtime_attestation(getRuntimeAttestationReport());
+Enclave::requestRuntimeAttestation(unsigned char *nonce) {
+  Error retval = pDevice->runtime_attestation(getRuntimeAttestationReport(), nonce);
 }
 
 void

@@ -44,7 +44,7 @@ class KeystoneDevice {
   virtual Error destroy();
   virtual Error run(uintptr_t* ret);
   virtual Error resume(uintptr_t* ret);
-  virtual Error runtime_attestation(report_t *report);
+  virtual Error runtime_attestation(runtime_report_t *report, unsigned char *nonce);
   virtual Error get_cert_chain_and_lak(unsigned char *cert_sm, unsigned char *cert_root, unsigned char *cert_man, unsigned char *cert_lak, int *lengths);
   virtual void* map(uintptr_t addr, size_t size);
 };

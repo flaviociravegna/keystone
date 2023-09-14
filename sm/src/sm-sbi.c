@@ -70,16 +70,23 @@ unsigned long sbi_sm_stop_enclave(struct sbi_trap_regs *regs, unsigned long requ
   return 0;
 }
 
-unsigned long sbi_sm_runtime_attestation(uintptr_t report, uintptr_t data, uintptr_t size) {
-  struct report report_local;
+unsigned long sbi_sm_runtime_attestation(uintptr_t report, uintptr_t nonce) {
+  struct runtime_report report_local;
+  unsigned char nonce_copied[32];
+
   unsigned long ret = copy_enclave_report_runtime_attestation_into_sm(report, &report_local);  
-  
   if (ret) {
     sbi_printf("[SM] Error while copying runtime attestation report\n");
     return ret;
   }
+
+  ret = copy_nonce_into_sm(nonce, nonce_copied);
+  if (ret) {
+    sbi_printf("[SM] Error while copying nonce\n");
+    return ret;
+  }
   
-  ret = attest_integrity_at_runtime(&report_local, data, size, cpu_get_enclave_id());
+  ret = attest_integrity_at_runtime(&report_local, nonce_copied, cpu_get_enclave_id());
   if (ret)
     return ret;
 
@@ -181,12 +188,6 @@ unsigned long sbi_sm_get_cert_chain_and_lak(uintptr_t cert_sm, uintptr_t cert_ro
     sbi_printf("[SM] Error while copying the lengths array from SM\n");
     return SBI_ERR_SM_ENCLAVE_ILLEGAL_ARGUMENT;
   }
-
-  sbi_printf("[SM] LAK cert: ");
-  for (int i = 0; i < sizes[3]; i++) {
-    sbi_printf("%02X,", temp_cert_lak[i]);
-  }
-  sbi_printf("\n");
 
   return ret;
 }

@@ -11,10 +11,20 @@
 #include "ed25519/ed25519.h"
 #include "verifier/json11.h"
 
+#define NONCE_LEN 32
+
 struct enclave_report_t {
   byte hash[MDSIZE];
   uint64_t data_len;
   byte data[ATTEST_DATA_MAXLEN];
+  byte signature[SIGNATURE_SIZE];
+};
+
+/* runtime enclave attestation report */
+struct enclave_runtime_report_t
+{
+  byte hash[MDSIZE];
+  byte nonce[NONCE_LEN];
   byte signature[SIGNATURE_SIZE];
 };
 
@@ -30,9 +40,18 @@ struct report_t {
   byte dev_public_key[PUBLIC_KEY_SIZE];
 };
 
+/* runtime attestation report */
+struct runtime_report_t {
+  struct enclave_runtime_report_t enclave;
+  struct sm_report_t sm;
+  byte dev_public_key[PUBLIC_KEY_SIZE];
+};
+
+
 class Report {
  private:
   struct report_t report;
+  struct runtime_report_t runtime_report;
 
  public:
   std::string BytesToHex(byte* bytes, size_t len);
@@ -50,4 +69,14 @@ class Report {
   size_t getDataSize();
   byte* getEnclaveHash();
   byte* getSmHash();
+
+  /****** runtime attestation functions ******/
+  void fromBytesRuntime(byte* bin);
+  int verify(
+      const byte* expected_enclave_hash,
+      const byte* expected_sm_hash,
+      const byte* dev_public_key);
+  int checkSignaturesOnlyRuntime(const byte* dev_public_key);
+  void* getNonceRuntime();
+  byte* getEnclaveRuntimeHash();
 };

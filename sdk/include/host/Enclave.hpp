@@ -46,7 +46,7 @@ class Enclave {
   uintptr_t runtime_stk_sz;
   void* shared_buffer;
   size_t shared_buffer_size;
-  report_t* runtime_attestation_report;
+  runtime_report_t* runtime_attestation_report;
 
   OcallFunc oFuncDispatch;
   bool mapUntrusted(size_t size);
@@ -68,7 +68,7 @@ class Enclave {
   const char* getHash();
   void* getSharedBuffer();
   size_t getSharedBufferSize();
-  report_t* getRuntimeAttestationReport();
+  runtime_report_t* getRuntimeAttestationReport();
   Error registerOcallDispatch(OcallFunc func);
   Error init(const char* filepath, const char* runtime, Params parameters);
   Error init(
@@ -77,7 +77,7 @@ class Enclave {
   Error destroy();
   Error run(uintptr_t* ret = nullptr);
   Error run_with_runtime_attestation_support(uintptr_t* retval);
-  void requestRuntimeAttestation();
+  void requestRuntimeAttestation(unsigned char *nonce);
   void requestCertChain(unsigned char *cert_sm, unsigned char *cert_root, unsigned char *cert_man, unsigned char *cert_lak, int *lengths);
 };
 

@@ -7,16 +7,23 @@
 #include <cstdio>
 #include "../verifier/report.h"
 
+#define NONCE_LEN 32
+
 namespace Keystone {
 
 KeystoneDevice::KeystoneDevice() { eid = -1; }
 
 Error
-KeystoneDevice::runtime_attestation(report_t *report) {
+KeystoneDevice::runtime_attestation(runtime_report_t *report, unsigned char *nonce) {
   struct keystone_ioctl_runtime_attestation params;
+  std::copy(nonce, nonce + NONCE_LEN, params.nonce);
   params.eid = eid;
-  params.size = sizeof(unsigned long);
-  params.nonce = random();
+
+  std::cout << "Copied Nonce: ";
+    for (int i = 0; i < 32; ++i) {
+        printf("%02x", params.nonce[i]);
+    }
+    std::cout << std::endl;
 
   if (ioctl(fd, KEYSTONE_IOC_RUNTIME_ATTESTATION, &params)) {
     perror("ioctl error");
@@ -25,6 +32,11 @@ KeystoneDevice::runtime_attestation(report_t *report) {
   }
   
   memcpy(report, &(params.attestation_report), sizeof(params.attestation_report));
+  std::cout << "Copied Nonce: ";
+    for (int i = 0; i < 32; ++i) {
+        printf("%02X", report->enclave.nonce[i]);
+    }
+    std::cout << std::endl;
 
   return Error::Success;
 }

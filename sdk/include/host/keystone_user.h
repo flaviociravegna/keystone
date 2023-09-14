@@ -41,6 +41,23 @@
 #define RT_EXECONLY 8
 /*********************************/
 
+#define NONCE_LEN 32
+
+/* runtime enclave attestation report */
+struct enclave_runtime_report_t
+{
+  byte hash[MDSIZE];
+  byte nonce[NONCE_LEN];
+  byte signature[SIGNATURE_SIZE];
+};
+
+/* runtime attestation report */
+struct runtime_report_t {
+  struct enclave_runtime_report_t enclave;
+  struct sm_report_t sm;
+  byte dev_public_key[PUBLIC_KEY_SIZE];
+};
+
 struct runtime_params_t {
   uintptr_t runtime_entry;
   uintptr_t user_entry;
@@ -84,9 +101,8 @@ struct keystone_ioctl_run_enclave {
 struct keystone_ioctl_runtime_attestation {
   uintptr_t eid;
   uintptr_t error;
-  unsigned long nonce;
-  unsigned long size;
-  struct report_t attestation_report;
+  unsigned char nonce[NONCE_LEN];
+  struct runtime_report_t attestation_report;
 };
 
 struct keystone_ioctl_cert_chain {

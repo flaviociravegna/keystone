@@ -229,7 +229,7 @@ int keystone_runtime_attestation(unsigned long data) {
   struct sbiret ret;
   struct keystone_ioctl_runtime_attestation *arg = (struct keystone_ioctl_runtime_attestation*) data;
   struct enclave* enclave = get_enclave_by_id(arg->eid);
-  struct report_t *report = kmalloc(sizeof(struct report_t), GFP_KERNEL);
+  struct runtime_report_t *report = kmalloc(sizeof(struct runtime_report_t), GFP_KERNEL);
 
   if (!report) {
     keystone_err("failed to allocate report struct\n");
@@ -249,8 +249,7 @@ int keystone_runtime_attestation(unsigned long data) {
     goto error;
   }
 
-  report->enclave.data_len = 7;
-  ret = sbi_sm_runtime_attestation_enclave(report, arg->nonce, arg->size);
+  ret = sbi_sm_runtime_attestation_enclave(report, arg->nonce);
   arg->attestation_report = *report;
   arg->error = ret.error;
 

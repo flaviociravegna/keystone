@@ -118,15 +118,33 @@ struct enclave_report
   byte data[ATTEST_DATA_MAXLEN];
   byte signature[SIGNATURE_SIZE];
 };
+
+#define NONCE_LEN 32
+/* runtime attestation report */
+struct enclave_runtime_report
+{
+  byte hash[MDSIZE];
+  byte nonce[NONCE_LEN];
+  byte signature[SIGNATURE_SIZE];
+};
+
 struct sm_report
 {
   byte hash[MDSIZE];
   byte public_key[PUBLIC_KEY_SIZE];
   byte signature[SIGNATURE_SIZE];
 };
+
 struct report
 {
   struct enclave_report enclave;
+  struct sm_report sm;
+  byte dev_public_key[PUBLIC_KEY_SIZE];
+};
+
+struct runtime_report
+{
+  struct enclave_runtime_report enclave;
   struct sm_report sm;
   byte dev_public_key[PUBLIC_KEY_SIZE];
 };
@@ -164,10 +182,11 @@ unsigned long get_cert_chain(enclave_id eid, unsigned char** certs, int* sizes);
 unsigned long do_crypto_op(enclave_id eid, int flag, unsigned char* data, int data_len, unsigned char* out_data, int* len_out_data, unsigned char* pk);
 
 /************ verification of the enclave at runtime ************/
-unsigned long copy_enclave_report_runtime_attestation_into_sm(uintptr_t src, struct report* dest);
-unsigned long copy_enclave_report_runtime_attestation_from_sm(struct report* src, uintptr_t dest);
+unsigned long copy_enclave_report_runtime_attestation_into_sm(uintptr_t src, struct runtime_report* dest);
+unsigned long copy_enclave_report_runtime_attestation_from_sm(struct runtime_report* src, uintptr_t dest);
+unsigned long copy_nonce_into_sm(uintptr_t src, unsigned char* dest);
 unsigned long verify_integrity_rt_eapp(int eid);
-unsigned long attest_integrity_at_runtime(struct report *report, uintptr_t data, uintptr_t size, enclave_id eid);
+unsigned long attest_integrity_at_runtime(struct runtime_report *report, unsigned char *nonce, enclave_id eid);
 void compute_eapp_hash(struct enclave *enclave, int at_runtime);
 
 /************* certificates *************/

@@ -44,10 +44,10 @@ struct sbiret sbi_sm_run_enclave(unsigned long eid);
 struct sbiret sbi_sm_resume_enclave(unsigned long eid);
 /************** NEW SBI **************/
 struct sbiret sbi_sm_runtime_attestation_enclave(
-  struct report_t *report,
-  unsigned long nonce,
-  unsigned long size
+  struct runtime_report_t *report,
+  unsigned char *nonce
 );
+
 struct sbiret sbi_sm_get_cert_chain(
   unsigned char *cert_sm,
   unsigned char *cert_root,

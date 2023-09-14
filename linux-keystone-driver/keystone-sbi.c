@@ -25,12 +25,11 @@ struct sbiret sbi_sm_resume_enclave(unsigned long eid) {
 }
 
 struct sbiret sbi_sm_runtime_attestation_enclave(
-  struct report_t *report,
-  unsigned long nonce,
-  unsigned long size) {
+  struct runtime_report_t *report,
+  unsigned char *nonce) {
     return sbi_ecall(KEYSTONE_SBI_EXT_ID,
     SBI_SM_RUNTIME_ATTESTATION,
-    (unsigned long) report, nonce, size, 0, 0, 0);
+    (unsigned long) report, (unsigned long) nonce, 0, 0, 0, 0);
 }
 
 struct sbiret sbi_sm_get_cert_chain(
