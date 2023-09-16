@@ -136,10 +136,8 @@ Report::verify(
     const byte* expected_enclave_hash, const byte* expected_sm_hash,
     const byte* dev_public_key) {
   /* verify that enclave hash matches */
-  int encl_hash_valid =
-      memcmp(expected_enclave_hash, report.enclave.hash, MDSIZE) == 0;
+  int encl_hash_valid = memcmp(expected_enclave_hash, report.enclave.hash, MDSIZE) == 0;
   int sm_hash_valid = memcmp(expected_sm_hash, report.sm.hash, MDSIZE) == 0;
-
   int signature_valid = checkSignaturesOnly(dev_public_key);
 
   return encl_hash_valid && sm_hash_valid && signature_valid;
@@ -175,37 +173,47 @@ Report::getDataSize() {
 }
 
 /************* Runtime Attestation Section *************/
-void fromBytesRuntime(byte* bin) {
+void Report::fromBytesRuntime(byte* bin) {
   std::memcpy(&runtime_report, bin, sizeof(struct runtime_report_t));
 }
 
-int verify(
-    const byte* expected_enclave_hash,
+int Report::verifyRuntimeReport(
+    const byte* expected_enclave_runtime_hash,
     const byte* expected_sm_hash,
-    const byte* dev_public_key) {
+    const byte* dev_public_key,
+    const byte* lak_pub) {
+  /* verify that enclave hash matches */
+  int encl_hash_valid = memcmp(expected_enclave_runtime_hash, runtime_report.enclave.hash, MDSIZE) == 0;
+  int sm_hash_valid = memcmp(expected_sm_hash, runtime_report.sm.hash, MDSIZE) == 0;
+  int signature_valid = checkSignaturesOnlyRuntime(dev_public_key, lak_pub);
 
+  return encl_hash_valid && sm_hash_valid && signature_valid;
 }
-int checkSignaturesOnlyRuntime(const byte* dev_public_key, const byte* lak) {
+
+int Report::checkSignaturesOnlyRuntime(const byte* dev_public_key, const byte* lak_pub) {
   int sm_valid      = 0;
   int enclave_valid = 0;
 
   /* verify SM report */
   sm_valid = ed25519_verify(
-      runtime_report.sm.signature, reinterpret_cast<byte*>(&report.sm),
-      MDSIZE + PUBLIC_KEY_SIZE, dev_public_key);
+      runtime_report.sm.signature, reinterpret_cast<byte*>(&runtime_report.sm),
+      MDSIZE + PUBLIC_KEY_SIZE, dev_public_key
+    );
+  /*if (sm_valid) std::cout << "SM signature is valid" << std::endl;
+  else std::cout << "SM signature is NOT valid" << std::endl;*/
 
   /* verify Enclave runtime report */
-  enclave_valid = ed25519_verify(
-      runtime_report.enclave.signature, reinterpret_cast<byte*>(&runtime_report.enclave),
-      MDSIZE + sizeof(uint64_t) + runtime_report.enclave.data_len,
-      runtime_report.sm.public_key);
+  enclave_valid = ed25519_verify(runtime_report.enclave.signature, runtime_report.enclave.hash, MDSIZE, lak_pub);
+  /*if (enclave_valid) std::cout << "Enclave signature is valid" << std::endl;
+  else std::cout << "Enclave signature is NOT valid" << std::endl;*/
 
   return sm_valid && enclave_valid;
 }
 
-void* getNonceRuntime() {
+void* Report::getNonceRuntime() {
   return runtime_report.enclave.nonce;
 }
-byte* getEnclaveRuntimeHash() {
+
+byte* Report::getEnclaveRuntimeHash() {
   return runtime_report.enclave.hash;
 }

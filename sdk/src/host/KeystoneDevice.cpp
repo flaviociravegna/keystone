@@ -19,12 +19,6 @@ KeystoneDevice::runtime_attestation(runtime_report_t *report, unsigned char *non
   std::copy(nonce, nonce + NONCE_LEN, params.nonce);
   params.eid = eid;
 
-  std::cout << "Copied Nonce: ";
-    for (int i = 0; i < 32; ++i) {
-        printf("%02x", params.nonce[i]);
-    }
-    std::cout << std::endl;
-
   if (ioctl(fd, KEYSTONE_IOC_RUNTIME_ATTESTATION, &params)) {
     perror("ioctl error");
     eid = -1;
@@ -32,11 +26,6 @@ KeystoneDevice::runtime_attestation(runtime_report_t *report, unsigned char *non
   }
   
   memcpy(report, &(params.attestation_report), sizeof(params.attestation_report));
-  std::cout << "Copied Nonce: ";
-    for (int i = 0; i < 32; ++i) {
-        printf("%02X", report->enclave.nonce[i]);
-    }
-    std::cout << std::endl;
 
   return Error::Success;
 }

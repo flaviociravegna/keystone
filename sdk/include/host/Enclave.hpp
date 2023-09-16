@@ -77,7 +77,7 @@ class Enclave {
   Error destroy();
   Error run(uintptr_t* ret = nullptr);
   Error run_with_runtime_attestation_support(uintptr_t* retval);
-  void requestRuntimeAttestation(unsigned char *nonce);
+  void requestRuntimeAttestation(unsigned char *nonce, unsigned char *buffer_for_report, int *report_size);
   void requestCertChain(unsigned char *cert_sm, unsigned char *cert_root, unsigned char *cert_man, unsigned char *cert_lak, int *lengths);
 };
 

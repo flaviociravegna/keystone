@@ -519,8 +519,10 @@ Enclave::getRuntimeAttestationReport() {
 }
 
 void
-Enclave::requestRuntimeAttestation(unsigned char *nonce) {
+Enclave::requestRuntimeAttestation(unsigned char *nonce, unsigned char *buffer_for_report, int *report_size) {
   Error retval = pDevice->runtime_attestation(getRuntimeAttestationReport(), nonce);
+  *report_size = sizeof(runtime_report_t);
+  std::memcpy(buffer_for_report, runtime_attestation_report, sizeof(runtime_report_t));
 }
 
 void

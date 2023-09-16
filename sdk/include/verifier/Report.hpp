@@ -72,11 +72,12 @@ class Report {
 
   /****** runtime attestation functions ******/
   void fromBytesRuntime(byte* bin);
-  int verify(
-      const byte* expected_enclave_hash,
-      const byte* expected_sm_hash,
-      const byte* dev_public_key);
-  int checkSignaturesOnlyRuntime(const byte* dev_public_key);
+  int verifyRuntimeReport(
+    const byte* expected_enclave_runtime_hash,
+    const byte* expected_sm_hash,
+    const byte* dev_public_key,
+    const byte* lak_pub);
+  int checkSignaturesOnlyRuntime(const byte* dev_public_key, const byte* lak_pub);
   void* getNonceRuntime();
   byte* getEnclaveRuntimeHash();
 };
