@@ -28,7 +28,7 @@ done;
  -bios @fw_elf@ \
  -kernel @linux_image@ \
  @extra_qemu_options@ \
- -netdev user,id=net0,net=192.168.100.1/24,dhcpstart=192.168.100.128,hostfwd=tcp::${HOST_PORT}-:22 \
+ -netdev user,id=net0,net=192.168.100.1/24,dhcpstart=192.168.100.128,hostfwd=tcp::${HOST_PORT}-:22,hostfwd=tcp::8068-:8068,hostfwd=tcp::8067-:8067 \
  -device virtio-net-device,netdev=net0 \
  -device virtio-rng-pci \
  -smp $SMP

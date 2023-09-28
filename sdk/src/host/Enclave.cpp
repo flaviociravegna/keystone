@@ -443,12 +443,6 @@ Enclave::run(uintptr_t* retval) {
   Error ret = pDevice->run(retval);
   int x = 1;
   while (ret == Error::EdgeCallHost || ret == Error::EnclaveInterrupted) {
-    /*if (ret == Error::EnclaveInterrupted) {
-      x++;
-      if (x % 3 == 0)
-        ret_runtime_attest = pDevice->runtime_attestation(retval);
-    }*/
-
     /* enclave is stopped in the middle. */
     if (ret == Error::EdgeCallHost && oFuncDispatch != NULL) {
       oFuncDispatch(getSharedBuffer());
@@ -476,16 +470,6 @@ Enclave::run_with_runtime_attestation_support(uintptr_t* retval) {
   Error ret = pDevice->run(retval);
 
   while (ret == Error::EdgeCallHost || ret == Error::EnclaveInterrupted) {
-    //if (ret == Error::EnclaveInterrupted) {
-      /*std::unique_lock<std::mutex> lock(mtx); // RAII pattern
-      cv.wait(lock, [this]{ return is_runtime_attestation_requested; });
-
-      std::cout << "Runtime attestation request accepted. Doing something..." << std::endl;
-      ret_runtime_attest = pDevice->runtime_attestation(retval, getRuntimeAttestationReport());*/
-      //is_runtime_attestation_requested = false; // Reset the flag
-      //std::cout << "enclave interrupted" << std::endl;
-    //}
-
     /* enclave is stopped in the middle. */
     if (ret == Error::EdgeCallHost && oFuncDispatch != NULL) {
       oFuncDispatch(getSharedBuffer());

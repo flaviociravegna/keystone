@@ -187,7 +187,7 @@ unsigned long copy_enclave_report_runtime_attestation_from_sm(struct runtime_rep
 unsigned long copy_nonce_into_sm(uintptr_t src, unsigned char* dest);
 unsigned long verify_integrity_rt_eapp(int eid);
 unsigned long attest_integrity_at_runtime(struct runtime_report *report, unsigned char *nonce, enclave_id eid);
-void compute_eapp_hash(struct enclave *enclave, int at_runtime);
+//void compute_eapp_hash(struct enclave *enclave, int at_runtime);
 
 /************* certificates *************/
 unsigned long copy_cert_from_sm(unsigned char *src_cert, uintptr_t dest_cert, int size);

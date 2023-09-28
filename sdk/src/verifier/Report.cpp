@@ -199,14 +199,10 @@ int Report::checkSignaturesOnlyRuntime(const byte* dev_public_key, const byte* l
       runtime_report.sm.signature, reinterpret_cast<byte*>(&runtime_report.sm),
       MDSIZE + PUBLIC_KEY_SIZE, dev_public_key
     );
-  /*if (sm_valid) std::cout << "SM signature is valid" << std::endl;
-  else std::cout << "SM signature is NOT valid" << std::endl;*/
 
   /* verify Enclave runtime report */
   enclave_valid = ed25519_verify(runtime_report.enclave.signature, runtime_report.enclave.hash, MDSIZE, lak_pub);
-  /*if (enclave_valid) std::cout << "Enclave signature is valid" << std::endl;
-  else std::cout << "Enclave signature is NOT valid" << std::endl;*/
-
+  
   return sm_valid && enclave_valid;
 }
 

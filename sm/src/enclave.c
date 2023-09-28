@@ -12,11 +12,15 @@
 #include <sbi/riscv_asm.h>
 #include <sbi/riscv_locks.h>
 #include <sbi/sbi_console.h>
-#include <sbi/sbi_timer.h>
 #include "sha3/sha3.h"
 #include "sm.h"
 #include "ed25519/ed25519.h"
 #include "x509custom.h"
+#include "verify-int.h"
+
+#if SM_RUNTIME_ATTESTATION_PERF_TEST
+#include <sbi/sbi_timer.h>
+#endif
 
 #define PRINT_CERTS 0
 
@@ -44,6 +48,10 @@ extern int length_cert_root;
 extern byte cert_man[512];
 extern byte length_cert_man;
 sha3_ctx_t hash_ctx_to_use;
+
+#if SM_RUNTIME_ATTESTATION_FUNC_TEST
+uint8_t counter_attestations = 0;
+#endif
 
 int print_hex_string(char* name, unsigned char* value, int size){
   sbi_printf("%s: 0x", name);
@@ -419,14 +427,14 @@ static int is_create_args_valid(struct keystone_sbi_create* args)
 {
   uintptr_t epm_start, epm_end;
 
-  /* printm("[create args info]: \r\n\tepm_addr: %llx\r\n\tepmsize: %llx\r\n\tutm_addr: %llx\r\n\tutmsize: %llx\r\n\truntime_addr: %llx\r\n\tuser_addr: %llx\r\n\tfree_addr: %llx\r\n", */
-  /*        args->epm_region.paddr, */
-  /*        args->epm_region.size, */
-  /*        args->utm_region.paddr, */
-  /*        args->utm_region.size, */
-  /*        args->runtime_paddr, */
-  /*        args->user_paddr, */
-  /*        args->free_paddr); */
+  /*sbi_printf("[create args info]: \r\n\tepm_addr: %lx\r\n\tepmsize: %lx\r\n\tutm_addr: %lx\r\n\tutmsize: %lx\r\n\truntime_addr: %lx\r\n\tuser_addr: %lx\r\n\tfree_addr: %lx\r\n", 
+          args->epm_region.paddr, 
+          args->epm_region.size, 
+          args->utm_region.paddr, 
+          args->utm_region.size, 
+          args->runtime_paddr, 
+          args->user_paddr, 
+          args->free_paddr); */
 
   // check if physical addresses are valid
   if (args->epm_region.size <= 0)
@@ -581,8 +589,17 @@ unsigned long create_enclave(unsigned long *eidptr, struct keystone_sbi_create c
   /* Validate memory, prepare hash and signature for attestation */
   spin_lock(&encl_lock); // FIXME This should error for second enter.
 
+  #if SM_RUNTIME_ATTESTATION_PERF_TEST
+  u64 final_value;
+  u64 init_value = sbi_timer_value();
+  #endif
+
   ret = validate_and_hash_enclave(&enclaves[eid]);
 
+  #if SM_RUNTIME_ATTESTATION_PERF_TEST
+  final_value = sbi_timer_value();
+  sbi_printf("\n[SM] Timer ticks needed to compute the boot-time hash: %lu \n", final_value - init_value);
+  #endif
   // The CDI of the sm is combined with the measure of the enclaves to obtain the CDI of the enclave
   sha3_init(&hash_ctx_to_use, 64);
   sha3_update(&hash_ctx_to_use, CDI, 64);
@@ -1261,10 +1278,22 @@ unsigned long attest_integrity_at_runtime(
     ret = SBI_ERR_SM_ENCLAVE_NOT_EXECUTION_TIME;
     goto err_unlock;
   }
-
+  
+  #if SM_RUNTIME_ATTESTATION_PERF_TEST
+  u64 final_value;
+  u64 final_value_tot = 0;
+  u64 init_value = sbi_timer_value();
+  #endif
   /* compute hash of the read only enclave pages
      and save it in the associated enclave struct */
   compute_eapp_hash(&enclaves[eid], 1);
+
+  #if SM_RUNTIME_ATTESTATION_PERF_TEST
+  final_value = sbi_timer_value();
+  final_value_tot = final_value;
+  sbi_printf("\n[SM] Timer ticks needed to compute the hash: %lu \n", final_value - init_value);
+  init_value = sbi_timer_value();
+  #endif
 
   sbi_memcpy(report->dev_public_key, dev_public_key, PUBLIC_KEY_SIZE);
   sbi_memcpy(report->sm.hash, sm_hash, MDSIZE);
@@ -1273,7 +1302,19 @@ unsigned long attest_integrity_at_runtime(
   sbi_memcpy(report->enclave.hash, enclaves[eid].hash_rt_eapp_actual, MDSIZE);
   sbi_memcpy(report->enclave.nonce, (byte *) nonce, NONCE_LEN);
   ed25519_sign(report->enclave.signature, report->enclave.hash, MDSIZE, enclaves[eid].local_att_pub, enclaves[eid].local_att_priv);
-  //sm_sign(report->enclave.signature, report->enclave.hash, MDSIZE);
+  
+  #if SM_RUNTIME_ATTESTATION_FUNC_TEST
+  // Flip the first bit of the measurement for testing purposes
+  counter_attestations++;
+  if (counter_attestations == 3)
+    report->enclave.hash[0] ^= 0x80;
+  #endif
+
+  #if SM_RUNTIME_ATTESTATION_PERF_TEST
+  final_value = sbi_timer_value();
+  final_value_tot += final_value;
+  sbi_printf("[SM] Timer ticks needed to compile the report: %lu \n", final_value - init_value);
+  #endif
 
   if (ret) {
     ret = SBI_ERR_SM_ENCLAVE_ILLEGAL_ARGUMENT;

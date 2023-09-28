@@ -217,14 +217,12 @@ int walk_old_pt_and_update(pte *tb, uintptr_t vaddr, int contiguous, int level) 
     for (walk = tb, i = 0; walk < end; walk += 1, i++) {
         //The runtime can only access virtual addresses
         uintptr_t *walk_virt = (uintptr_t *)__va((uintptr_t)walk);
-        //printf("\nWalk: [v: 0x%lx, p: 0x%lx]", walk_virt, walk);
         if (*walk_virt == 0) {
             contiguous = 0;
             continue;
         }
 
         if (level == RISCV_PGLEVEL_TOP && i & RISCV_PGTABLE_HIGHEST_BIT) {
-            //printf("\nFIRST IF");
             vpn = ((-1UL << RISCV_PT_INDEX_BITS) | (i & RISCV_PGLEVEL_MASK));
         } else
             vpn = ((vaddr << RISCV_PT_INDEX_BITS) | (i & RISCV_PGLEVEL_MASK));
@@ -247,17 +245,6 @@ int walk_old_pt_and_update(pte *tb, uintptr_t vaddr, int contiguous, int level) 
               if (is_r) *entry |= PTE_R;
               if (is_w) *entry |= PTE_W;
               if (is_x) *entry |= PTE_X;
-
-              
-              /*printf("\nAddr: [v: 0x%lx, p: 0x%lx], Permissions: R:%d, W:%d, X:%d, old_pte: [a: 0x%lx, pte: 0x%lx]",
-              va_start, phys_addr,
-              (*entry & PTE_R) > 0,
-              (*entry & PTE_W) > 0,
-              (*entry & PTE_X) > 0,
-              walk_virt, *walk_virt);*/
-
-              //pte *old_e = get_old_pte_from_va(va_start);
-              //printf("\nRetrieved pte: [a: 0x%lx, pte: 0x%lx]]\n****************************************************\n", old_e, *old_e);
             }
           }
         } else  // otherwise, recurse on a lower level
@@ -300,20 +287,6 @@ set_leaf_level(uintptr_t dram_base,
         else
           flags = PTE_R | PTE_W | PTE_A | PTE_D;
       } else if (actual_pa < freemem_pa_start) {
-          // EAPP addresses
-          // TODO: modify the entry correctly here
-          /*pte *entry_old_root_pt = get_old_pte_from_va(__va(actual_pa));
-          if (entry_old_root_pt == 0)
-            printf("\n ZERO");
-          else {
-            printf("\nEntry found! ");
-            printf("\nAddr: [v: 0x%lx, p: 0x%lx], Addr pte: 0x%lx",
-              __va(actual_pa), actual_pa, entry_old_root_pt);
-            printf(", Permissions: R:%d, W:%d, X:%d",
-              (*entry_old_root_pt & PTE_R) > 0,
-              (*entry_old_root_pt & PTE_W) > 0,
-              (*entry_old_root_pt & PTE_X) > 0);
-          }*/
           flags = PTE_R | PTE_W | PTE_A | PTE_D;
       } else
           flags = PTE_R | PTE_W | PTE_A | PTE_D;  // Free memory addresses

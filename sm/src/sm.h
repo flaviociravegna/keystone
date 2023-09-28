@@ -73,6 +73,10 @@
 
 #define SM_DICE_DEBUG 0
 
+#define SM_RUNTIME_ATTESTATION_PERF_TEST 0
+#define SM_RUNTIME_ATTESTATION_FUNC_TEST 1
+
+
 void sm_init(bool cold_boot);
 
 /* platform specific functions */

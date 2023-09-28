@@ -14,4 +14,4 @@
 #endif
 
 uintptr_t satp_to_pa(uintptr_t satp);
-int walk_pt_and_hash(struct enclave *enclave, hash_ctx *ctx_x_pages, pte_t *tb, uintptr_t vaddr, int contiguous, int level, int at_runtime);
+void compute_eapp_hash(struct enclave *enclave, int at_runtime);
