@@ -89,6 +89,22 @@ else
   cd ../..
 fi
 
+# build SDK (NON RISC-V) if not present
+if [ ! -z $KEYSTONE_SDK_NON_RISCV_DIR ] && [ -e $KEYSTONE_SDK_NON_RISCV_DIR ]
+then
+  echo "KEYSTONE_SDK_NON_RISCV_DIR is set to $KEYSTONE_SDK_NON_RISCV_DIR and present. Skipping SDK installation."
+else
+  echo "KEYSTONE_SDK_NON_RISCV_DIR is not set or present. Installing from $(pwd)/sdk_std"
+  export KEYSTONE_SDK_NON_RISCV_DIR=$(pwd)/sdk_std/build$BITS
+  cd sdk_std
+  mkdir -p build
+  cd build
+  cmake .. $SDK_FLAGS
+  make
+  make install
+  cd ../..
+fi
+
 # update source.sh
 GCC_PATH=$(which riscv$BITS-unknown-linux-gnu-gcc)
 RISCV_DIR=$(dirname $(dirname $GCC_PATH))
