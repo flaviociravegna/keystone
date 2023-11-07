@@ -18,16 +18,16 @@ set(src_dir      ${CMAKE_CURRENT_LIST_DIR})
 set(scripts_dir  ${src_dir}/scripts)
 
 
-if (DEFINED ENV{KEYSTONE_SDK_STD_DIR})
-  set(KEYSTONE_SDK_STD_DIR $ENV{KEYSTONE_SDK_STD_DIR})
-  if (NOT IS_ABSOLUTE ${KEYSTONE_SDK_STD_DIR})
-    message(FATAL_ERROR "KEYSTONE_SDK_STD_DIR needs to be absolute path")
+if (DEFINED ENV{KEYSTONE_SDK_NON_RISCV_DIR})
+  set(KEYSTONE_SDK_NON_RISCV_DIR $ENV{KEYSTONE_SDK_NON_RISCV_DIR})
+  if (NOT IS_ABSOLUTE ${KEYSTONE_SDK_NON_RISCV_DIR})
+    message(FATAL_ERROR "KEYSTONE_SDK_NON_RISCV_DIR needs to be absolute path")
   endif()
-  get_filename_component(KEYSTONE_SDK_STD_DIR ${KEYSTONE_SDK_STD_DIR} ABSOLUTE)
-  set(out_dir    ${KEYSTONE_SDK_STD_DIR})
+  get_filename_component(KEYSTONE_SDK_STD_DIR ${KEYSTONE_SDK_NON_RISCV_DIR} ABSOLUTE)
+  set(out_dir    ${KEYSTONE_SDK_NON_RISCV_DIR})
 else()
-  message(FATAL_ERROR " * Set KEYSTONE_SDK_STD_DIR to the path you want to install the SDK.\n"
-    " * Try `export KEYSTONE_SDK_STD_DIR=<path/to/SDK>`")
+  message(FATAL_ERROR " * Set KEYSTONE_SDK_NON_RISCV_DIR to the path you want to install the SDK.\n"
+    " * Try `export KEYSTONE_SDK_NON_RISCV_DIR=<path/to/SDK>`")
   set(out_dir    ${CMAKE_BINARY_DIR})
 endif()
 
